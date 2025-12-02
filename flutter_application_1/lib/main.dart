@@ -16,13 +16,13 @@ void main() async {
   if (kIsWeb) {
     await Firebase.initializeApp(
       options: FirebaseOptions(
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_AUTH_DOMAIN",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_STORAGE_BUCKET",
-        messagingSenderId: "YOUR_MSG_ID",
-        appId: "YOUR_APP_ID",
-        measurementId: "YOUR_MEASUREMENT_ID",
+  apiKey: "AIzaSyB1AcSm3A2DvTsQ3UxKc9cgpi1dXkf8KkE",
+  authDomain: "appfb-60b59.firebaseapp.com",
+  projectId: "appfb-60b59",
+  storageBucket: "appfb-60b59.firebasestorage.app",
+  messagingSenderId: "332194770960",
+  appId: "1:332194770960:web:29480c6509e6bc587a1a95",
+  measurementId: "G-MKQVLZB88W"
       ),
     );
   } else {
