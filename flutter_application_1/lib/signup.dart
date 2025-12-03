@@ -16,24 +16,23 @@ class _SignupPageState extends State<SignupPage> {
   TextEditingController confirmPasswordController = TextEditingController();
 
   void signup() async {
-    if (nameController.text.isEmpty ||
-        emailController.text.isEmpty ||
-        phoneController.text.isEmpty ||
-        passwordController.text.isEmpty ||
-        confirmPasswordController.text.isEmpty) {
+    if (passwordController.text.trim() != confirmPasswordController.text.trim()) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("❗Please fill all fields"),
+          content: Text("❗The password and password confirmation do not match"),
           backgroundColor: Colors.redAccent,
         ),
       );
       return;
     }
 
-    if (passwordController.text != confirmPasswordController.text) {
+    if (nameController.text.isEmpty ||
+        emailController.text.isEmpty ||
+        phoneController.text.isEmpty ||
+        passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("❗Passwords do not match"),
+          content: Text("❗Please fill in all the required fields"),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -47,42 +46,64 @@ class _SignupPageState extends State<SignupPage> {
         password: passwordController.text.trim(),
       );
 
-      await FirebaseFirestore.instance
-          .collection("users")
-          .doc(userCredential.user!.uid)
-          .set({
-        "name": nameController.text.trim(),
-        "email": emailController.text.trim(),
-        "phone": phoneController.text.trim(),
-      });
+      if (userCredential.user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+          'uid': userCredential.user!.uid,
+          'name': nameController.text.trim(),
+          'email': emailController.text.trim(),
+          'phone': phoneController.text.trim(),
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("✔️ Account Created Successfully"),
+          content: Text("✔ Registration successful"),
           backgroundColor: Colors.green,
         ),
       );
 
-      Navigator.pop(context);
+      Navigator.pushReplacementNamed(context, "/");
 
-    } catch (e) {
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+
+      if (e.code == 'weak-password') {
+        errorMessage = "❗The password is too weak. It must be at least 6 characters long";
+      } else if (e.code == 'email-already-in-use') {
+        errorMessage = "❗This email address is already in use. Please log in or use another email address";
+      } else if (e.code == 'invalid-email') {
+        errorMessage = "❗The email format is invalid";
+      } else {
+        errorMessage = "❗Registration failed. Code: ${e.code}.message: ${e.message}";
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("❌ Error: $e"),
+          content: Text(errorMessage),
           backgroundColor: Colors.redAccent,
         ),
       );
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFFF5F5F5),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 25, vertical: 50),
-          child: Column(
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: Color(0xFFF6F6F6),
+    appBar: AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      iconTheme: IconThemeData(color: Colors.green),
+    ),
+    
+    body: SingleChildScrollView( 
+      child: Padding(
+        padding: const EdgeInsets.all(25.0),
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Logo / Icon
@@ -207,7 +228,7 @@ class _SignupPageState extends State<SignupPage> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(15),
                         gradient: LinearGradient(
-                            colors: [Colors.green, Colors.lightGreen]),
+                            colors: [Color(0xFF6B8D45), Color(0xFFBFE699)]),
                       ),
                       child: ElevatedButton(
                         onPressed: signup,

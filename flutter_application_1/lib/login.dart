@@ -36,7 +36,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
       );
 
-      Navigator.pushReplacementNamed(context, "/profile");
+      Navigator.pushReplacementNamed(context, "/");
 
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found') {
