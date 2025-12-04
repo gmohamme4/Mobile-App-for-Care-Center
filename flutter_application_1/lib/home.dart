@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -16,12 +17,15 @@ class _HomePageState extends State<HomePage> {
   int currentIndex = 0;
   bool isLoading = true;
 
+  String? _userName;
+
   List<Map<String, dynamic>> _equipment = [];
 
   @override
   void initState() {
     super.initState();
     fetchItems();
+    _checkUserAndFetchName();
   }
 
   Future<void> fetchItems() async {
@@ -36,6 +40,26 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         isLoading = false;
       });
+    }
+  }
+
+  Future<void> _checkUserAndFetchName() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final userData = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (userData.exists) {
+          setState(() {
+            _userName = userData.data()?['name'] ?? user.email; 
+          });
+        }
+      } catch (e) {
+        print("Error fetching user name: $e");
+      }
     }
   }
 
@@ -107,19 +131,39 @@ class _HomePageState extends State<HomePage> {
             children: [
               // Header
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Icon(Icons.search, color: Colors.grey[800]),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text("Welcome to Pharmacy App,", style: TextStyle(fontSize: 12, color: Colors.grey[700])),
-                      Text("John", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-                    ],
-                  ),
-                  Icon(Icons.notifications_none, color: Colors.grey[800]),
-                ],
+  mainAxisAlignment: MainAxisAlignment.center,
+  children: [
+    Builder(
+      builder: (context) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              "Welcome to Pharmacy App,", 
+              style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+            ),
+            if (_userName != null)
+              Text(
+                _userName!,
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87),
+              )
+            else
+              Text(
+                "Guest",
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87),
               ),
+          ],
+        );
+      },
+    ),
+  ],
+),
               SizedBox(height: 20),
 
               // Search Bar
@@ -208,69 +252,89 @@ class _HomePageState extends State<HomePage> {
               SizedBox(height: 10),
 
               // Equipment Grid
-              Expanded(
-                child: isLoading
-                    ? Center(child: CircularProgressIndicator())
-                    : filteredEquipment.isEmpty
-                        ? Center(child: Text("No equipment found", style: TextStyle(fontSize: 16)))
-                        : GridView.builder(
-                            itemCount: filteredEquipment.length,
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 12,
-                              childAspectRatio: 0.7,
-                            ),
-                            itemBuilder: (context, index) {
-                              final item = filteredEquipment[index];
-                              int rating = item['condition'] ?? 0;
-                              return Card(
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                                elevation: 4,
-                                child: InkWell(
-                                  onTap: () => print("Clicked on ${item['name']}"),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
-                                        child: Image.network(
-                                          item['image'] ?? '',
-                                          height: 100,
-                                          width: double.infinity,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) =>
-                                              Container(color: Colors.grey[300], child: Icon(Icons.broken_image, size: 50)),
-                                        ),
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: Text(item['name'] ?? '',
-                                            style: TextStyle(fontWeight: FontWeight.bold)),
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                                        child: Text("${item['description']}\nType: ${item['type']}",
-                                            style: TextStyle(fontSize: 12, color: Colors.grey[700])),
-                                      ),
-                                      SizedBox(height: 5),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                                        child: Row(
-                                          children: List.generate(
-                                              5,
-                                              (i) => Icon(Icons.star,
-                                                  size: 16,
-                                                  color: i < rating ? Color(0xFF6B8D45) : Colors.grey[400])),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+       Expanded(
+  child: isLoading
+      ? Center(child: CircularProgressIndicator())
+      : filteredEquipment.isEmpty
+          ? Center(child: Text("No equipment found", style: TextStyle(fontSize: 16)))
+          : GridView.builder(
+              itemCount: filteredEquipment.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.85,
               ),
+              itemBuilder: (context, index) {
+                final item = filteredEquipment[index];
+                int rating = item['condition'] ?? 0;
+
+                return Card(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15)),
+                  elevation: 4,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(15),
+                    onTap: () => print("Clicked on ${item['name']}"),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            item['name'] ?? '',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+
+                          Text(
+                            item['description'] ?? '',
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style:
+                                TextStyle(fontSize: 12, color: Colors.grey[700]),
+                          ),
+
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Color(0xFFBFE699),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              item['type'] ?? '',
+                              style: TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+
+                          Row(
+                            children: List.generate(
+                              5,
+                              (i) => Icon(
+                                Icons.star,
+                                size: 16,
+                                color: i < rating
+                                    ? Color(0xFF6B8D45)
+                                    : Colors.grey[400],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+),
+
             ],
           ),
         ),

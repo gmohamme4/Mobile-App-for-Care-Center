@@ -1,8 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AddEquipmentPage extends StatefulWidget {
   const AddEquipmentPage({super.key});
@@ -16,62 +14,54 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
   final TextEditingController descController = TextEditingController();
 
   String? selectedType;
-  File? selectedImage;
-
+  int selectedCondition = 5; 
   final List<String> types = ["Rental", "Exchange", "Donation"];
-
-  Future pickImage() async {
-    final image = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (image == null) return;
-    setState(() {
-      selectedImage = File(image.path);
-    });
-  }
-
-  Future<String> uploadImage(File imageFile) async {
-    String fileName = DateTime.now().millisecondsSinceEpoch.toString();
-    Reference ref = FirebaseStorage.instance.ref().child('equipment_images/$fileName');
-    UploadTask uploadTask = ref.putFile(imageFile);
-    TaskSnapshot snapshot = await uploadTask;
-    return await snapshot.ref.getDownloadURL();
-  }
 
   void saveItem() async {
     if (nameController.text.isEmpty ||
         descController.text.isEmpty ||
-        selectedType == null ||
-        selectedImage == null) {
+        selectedType == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text("❗ Please fill all fields"),
-            backgroundColor: Colors.redAccent),
+          content: Text("❗Please fill in all required fields"),
+          backgroundColor: Colors.redAccent,
+        ),
       );
       return;
     }
 
     try {
-      String imageUrl = await uploadImage(selectedImage!);
+      Map<String, dynamic> data = {
+        'name': nameController.text.trim(),
+        'description': descController.text.trim(),
+        'type': selectedType,
+        'ownerId': FirebaseAuth.instance.currentUser!.uid,
+        'timestamp': FieldValue.serverTimestamp(),
+        'condition': selectedCondition,
+      };
 
-      await FirebaseFirestore.instance.collection("equipment").add({
-        "name": nameController.text,
-        "description": descController.text,
-        "type": selectedType,
-        "image_url": imageUrl,
-        "created_at": Timestamp.now(),
-      });
+      await FirebaseFirestore.instance.collection('equipment').add(data);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text("✔ Equipment Added Successfully"),
-            backgroundColor: Colors.green),
+          content: Text("✔ Equipment added successfully!"),
+          backgroundColor: Colors.green,
+        ),
       );
 
-      Navigator.pop(context);
+      nameController.clear();
+      descController.clear();
+      setState(() {
+        selectedType = null;
+        selectedCondition = 5;
+      });
     } catch (e) {
+      print("Error adding equipment: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text("❌ Error: $e"),
-            backgroundColor: Colors.redAccent),
+          content: Text("❌ Failed to add equipment. Error: ${e.toString()}"),
+          backgroundColor: Colors.redAccent,
+        ),
       );
     }
   }
@@ -86,161 +76,93 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
         elevation: 0,
       ),
       body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-          child: Column(
-            children: [
-              // Top Image Upload
-              GestureDetector(
-                onTap: pickImage,
-                child: Container(
-                  height: 180,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.grey.shade300),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 10,
-                          offset: Offset(0, 5)),
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+        child: Column(
+          children: [
+            Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black12, blurRadius: 15, offset: Offset(0, 8)),
+                ],
+              ),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      labelText: "Equipment Name",
+                    ),
+                  ),
+                  SizedBox(height: 15),
+
+                  TextField(
+                    controller: descController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: "Description",
+                    ),
+                  ),
+                  SizedBox(height: 15),
+
+                  DropdownButtonFormField(
+                    value: selectedType,
+                    items: types.map((type) {
+                      return DropdownMenuItem(
+                        value: type,
+                        child: Text(type),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedType = value;
+                      });
+                    },
+                    decoration: InputDecoration(labelText: "Select Type"),
+                  ),
+                  SizedBox(height: 15),
+
+                  Row(
+                    children: [
+                      Text(
+                        "Condition (1-5):",
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      SizedBox(width: 20),
+                      DropdownButton<int>(
+                        value: selectedCondition,
+                        items: [1, 2, 3, 4, 5].map((value) {
+                          return DropdownMenuItem(
+                            value: value,
+                            child: Text(value.toString()),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedCondition = value!;
+                          });
+                        },
+                      ),
                     ],
                   ),
-                  child: selectedImage == null
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.camera_alt, size: 50, color: Colors.grey),
-                              SizedBox(height: 10),
-                              Text("Tap to upload image",
-                                  style: TextStyle(color: Colors.grey[600])),
-                            ],
-                          ),
-                        )
-                      : ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: Image.file(
-                            selectedImage!,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                ),
+
+                  SizedBox(height: 25),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: saveItem,
+                      child: Text("Add Equipment"),
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(height: 30),
-
-              // Card Form
-              Container(
-                padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 15,
-                        offset: Offset(0, 8)),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Equipment Details",
-                      style:
-                          TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 20),
-
-                    // Name
-                    TextField(
-                      controller: nameController,
-                      decoration: InputDecoration(
-                        labelText: "Equipment Name",
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 15),
-
-                    // Description
-                    TextField(
-                      controller: descController,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        labelText: "Description",
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 15),
-
-                    // Dropdown Type
-                    DropdownButtonFormField(
-                      value: selectedType,
-                      items: types.map((type) {
-                        return DropdownMenuItem(
-                          value: type,
-                          child: Text(type),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedType = value.toString();
-                        });
-                      },
-                      decoration: InputDecoration(
-                        labelText: "Select Type",
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 25),
-
-                    // Save Button Gradient
-                    Container(
-                      width: double.infinity,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(15),
-                        gradient: LinearGradient(
-                            colors: [Color(0xFFBFE699), Color(0xFF6B8D45)]),
-                      ),
-                      child: ElevatedButton(
-                        onPressed: saveItem,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15)),
-                        ),
-                        child: Text(
-                          "Add Equipment",
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

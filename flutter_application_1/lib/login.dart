@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'signup.dart';
+import 'main.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final VoidCallback? onSignupTap;
+  const LoginPage({super.key, this.onSignupTap});
+
   @override
   _LoginPageState createState() => _LoginPageState();
+  
 }
 
 class _LoginPageState extends State<LoginPage> {
@@ -174,20 +178,26 @@ class _LoginPageState extends State<LoginPage> {
 
                     SizedBox(height: 20),
                     // Signup link
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => SignupPage()));
-                      },
-                      child: Text(
-                        "Don't have an account? Sign Up",
-                        style: TextStyle(
-                            color: Colors.green,
-                            decoration: TextDecoration.underline),
-                      ),
-                    )
+             // Signup link
+GestureDetector(
+  onTap: () {
+    if (widget.onSignupTap != null) {
+      widget.onSignupTap!();
+    } else {
+ Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(builder: (_) => MainScreen()),
+); // fallback
+    }
+  },
+  child: Text(
+    "Don't have an account? Sign Up",
+    style: TextStyle(
+        color: Colors.green,
+        decoration: TextDecoration.underline),
+  ),
+)
+
                   ],
                 ),
               ),
