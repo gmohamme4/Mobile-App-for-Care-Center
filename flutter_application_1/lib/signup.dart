@@ -9,16 +9,24 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
+  // controllers for input fields
   TextEditingController nameController = TextEditingController();
   TextEditingController emailController = TextEditingController();
   TextEditingController phoneController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
   TextEditingController confirmPasswordController = TextEditingController();
+  // New: Controller for ID Number
+  TextEditingController idController = TextEditingController();
+
+  // New: Role selection (default is Renter)
+  String selectedRole = 'Renter';
+  final List<String> availableRoles = ['Renter', 'Donor'];
 
   void signup() async {
+    // 1. Password validation
     if (passwordController.text.trim() != confirmPasswordController.text.trim()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text("❗The password and password confirmation do not match"),
           backgroundColor: Colors.redAccent,
         ),
@@ -26,12 +34,14 @@ class _SignupPageState extends State<SignupPage> {
       return;
     }
 
+    // 2. Empty fields validation (including ID Number now)
     if (nameController.text.isEmpty ||
         emailController.text.isEmpty ||
         phoneController.text.isEmpty ||
-        passwordController.text.isEmpty) {
+        passwordController.text.isEmpty ||
+        idController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text("❗Please fill in all the required fields"),
           backgroundColor: Colors.redAccent,
         ),
@@ -40,194 +50,195 @@ class _SignupPageState extends State<SignupPage> {
     }
 
     try {
-      UserCredential userCredential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      // 3. Create user in Firebase Auth
+      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
-      if (userCredential.user != null) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userCredential.user!.uid)
-            .set({
-          'uid': userCredential.user!.uid,
-          'name': nameController.text.trim(),
-          'email': emailController.text.trim(),
-          'phone': phoneController.text.trim(),
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-      }
+      // 4. Save user data to Firestore (users collection)
+      await FirebaseFirestore.instance
+          .collection('users')
+          // Document ID is the Firebase Auth UID
+          .doc(userCredential.user!.uid) 
+          .set({
+            'name': nameController.text.trim(),
+            'email': emailController.text.trim(),
+            'phone': phoneController.text.trim(),
+            'idNumber': idController.text.trim(), // New: ID Number
+            'role': selectedRole, // New: Selected Role
+            'timestamp': FieldValue.serverTimestamp(),
+          });
 
+      // 5. Success feedback and navigation
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("✔ Registration successful"),
+        const SnackBar(
+          content: Text("✔ Signup Successful!"),
           backgroundColor: Colors.green,
         ),
       );
-
-      Navigator.pushReplacementNamed(context, "/");
+      // Navigate back to the login page or the main screen
+      Navigator.pop(context); 
 
     } on FirebaseAuthException catch (e) {
       String errorMessage;
-
       if (e.code == 'weak-password') {
-        errorMessage = "❗The password is too weak. It must be at least 6 characters long";
+        errorMessage = 'The password provided is too weak.';
       } else if (e.code == 'email-already-in-use') {
-        errorMessage = "❗This email address is already in use. Please log in or use another email address";
-      } else if (e.code == 'invalid-email') {
-        errorMessage = "❗The email format is invalid";
+        errorMessage = 'An account already exists for that email.';
       } else {
-        errorMessage = "❗Registration failed. Code: ${e.code}.message: ${e.message}";
+        errorMessage = 'An error occurred. Please try again.';
       }
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(errorMessage),
+          content: Text("Error: $errorMessage"),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("An unexpected error occurred: $e"),
           backgroundColor: Colors.redAccent,
         ),
       );
     }
   }
 
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    backgroundColor: Color(0xFFF6F6F6),
-    appBar: AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      iconTheme: IconThemeData(color: Colors.green),
-    ),
-    
-    body: SingleChildScrollView( 
-      child: Padding(
-        padding: const EdgeInsets.all(25.0),
-        child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Logo / Icon
-              Container(
-                padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 10,
-                      offset: Offset(0, 5),
-                    ),
-                  ],
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Sign Up"),
+        backgroundColor: const Color(0xFF6B8D45),
+        foregroundColor: Colors.white,
+        centerTitle: true,
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(25.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              const Text(
+                "Create a New Account",
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF6B8D45),
                 ),
-                child: Icon(Icons.person_add, size: 60, color: Colors.green),
               ),
-              SizedBox(height: 30),
-
-              // Card for Form
+              const SizedBox(height: 30),
+              
               Container(
-                padding: EdgeInsets.all(20),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black12, blurRadius: 15, offset: Offset(0, 8))
+                      color: Colors.grey.withOpacity(0.2),
+                      spreadRadius: 3,
+                      blurRadius: 7,
+                      offset: const Offset(0, 3),
+                    ),
                   ],
                 ),
                 child: Column(
                   children: [
-                    Text(
-                      "Create Account",
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 25),
-
-                    // Name
+                    // Name Field
                     TextField(
                       controller: nameController,
                       decoration: InputDecoration(
                         labelText: "Full Name",
-                        prefixIcon: Icon(Icons.person),
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
-                    SizedBox(height: 15),
+                    const SizedBox(height: 15),
 
-                    // Email
+                    // Email Field
                     TextField(
                       controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
                         labelText: "Email",
-                        prefixIcon: Icon(Icons.email),
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
-                    SizedBox(height: 15),
+                    const SizedBox(height: 15),
 
-                    // Phone
+                    // Phone Field
                     TextField(
                       controller: phoneController,
                       keyboardType: TextInputType.phone,
                       decoration: InputDecoration(
                         labelText: "Phone Number",
-                        prefixIcon: Icon(Icons.phone),
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
-                    SizedBox(height: 15),
+                    const SizedBox(height: 15),
 
-                    // Password
+                    // New: ID Number Field
+                    TextField(
+                      controller: idController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: "ID Number",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+
+                    // New: Role Selection Dropdown
+                    DropdownButtonFormField<String>(
+                      value: selectedRole,
+                      decoration: InputDecoration(
+                        labelText: "I want to be a",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      items: availableRoles.map((String role) {
+                        return DropdownMenuItem<String>(
+                          value: role,
+                          child: Text(role == 'Renter' ? 'Renter' : 'Donor'),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          selectedRole = newValue!;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 15),
+
+                    // Password Field
                     TextField(
                       controller: passwordController,
                       obscureText: true,
                       decoration: InputDecoration(
                         labelText: "Password",
-                        prefixIcon: Icon(Icons.lock),
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
-                    SizedBox(height: 15),
+                    const SizedBox(height: 15),
 
-                    // Confirm Password
+                    // Confirm Password Field
                     TextField(
                       controller: confirmPasswordController,
                       obscureText: true,
                       decoration: InputDecoration(
                         labelText: "Confirm Password",
-                        prefixIcon: Icon(Icons.lock_outline),
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
-                    SizedBox(height: 25),
+                    const SizedBox(height: 30),
 
-                    // Signup Button with Gradient
+                    // Sign Up Button
                     Container(
                       width: double.infinity,
                       height: 50,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(15),
-                        gradient: LinearGradient(
+                        gradient: const LinearGradient(
                             colors: [Color(0xFF6B8D45), Color(0xFFBFE699)]),
                       ),
                       child: ElevatedButton(
@@ -238,7 +249,7 @@ Widget build(BuildContext context) {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(15)),
                         ),
-                        child: Text(
+                        child: const Text(
                           "Sign Up",
                           style: TextStyle(
                               fontSize: 18,
@@ -248,11 +259,11 @@ Widget build(BuildContext context) {
                       ),
                     ),
 
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
                     // Login link
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
-                      child: Text(
+                      child: const Text(
                         "Already have an account? Login",
                         style: TextStyle(
                             color: Colors.green,

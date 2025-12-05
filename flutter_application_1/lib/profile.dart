@@ -41,6 +41,11 @@ class ProfilePage extends StatelessWidget {
             return const Center(child: Text("No user data found"));
           }
 
+
+        var userData = snapshot.data!.data() as Map<String, dynamic>;
+        String role = userData['role'] ?? 'Guest';
+        String nationalId = userData['nationalId'] ?? 'N/A';
+
           var data = snapshot.data!.data() as Map<String, dynamic>;
 
           return SingleChildScrollView(
@@ -54,6 +59,7 @@ class ProfilePage extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 20),
+
 
                 Text(
                   data['name'] ?? '',
@@ -75,8 +81,22 @@ class ProfilePage extends StatelessWidget {
                   "Phone",
                   data['phone'],
                 ),
+                const SizedBox(height: 20),
 
-                const SizedBox(height: 30),
+                profileTile(
+                  Icons.person_pin_circle, 
+                  "User Role", 
+                  role
+                  ),
+
+                const SizedBox(height: 20),
+                  profileTile(
+                    Icons.badge, 
+                    "National ID / Registration ID", 
+                    nationalId
+                    ),
+             
+                  const SizedBox(height: 30),
 
                 SizedBox(
                   width: double.infinity,

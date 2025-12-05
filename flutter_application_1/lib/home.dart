@@ -30,7 +30,10 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> fetchItems() async {
     try {
-      final data = await FirebaseFirestore.instance.collection("equipment").get();
+      final data = await FirebaseFirestore.instance
+      .collection("equipment")
+      .where('isApproved', isEqualTo: true) 
+          .get(); 
       setState(() {
         _equipment = data.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
         isLoading = false;

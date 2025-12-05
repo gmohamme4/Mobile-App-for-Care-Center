@@ -3,7 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AddEquipmentPage extends StatefulWidget {
-  const AddEquipmentPage({super.key});
+  final String? userRole;
+ const AddEquipmentPage({super.key, this.userRole});
+
 
   @override
   _AddEquipmentPageState createState() => _AddEquipmentPageState();
@@ -12,6 +14,12 @@ class AddEquipmentPage extends StatefulWidget {
 class _AddEquipmentPageState extends State<AddEquipmentPage> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController descController = TextEditingController();
+  final TextEditingController quantityController = TextEditingController();
+  final TextEditingController locationController = TextEditingController();
+  final TextEditingController priceController = TextEditingController();
+
+  String selectedAvailability = 'available';
+  final List<String> availabilityStatuses = ["available", "rented", "under maintenance"];
 
   String? selectedType;
   int selectedCondition = 5; 
@@ -29,6 +37,9 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
       );
       return;
     }
+    double rentalPrice = double.tryParse(priceController.text) ?? 0.0;
+    int quantity = int.tryParse(quantityController.text) ?? 1;
+    final bool isApprovedByAdmin = widget.userRole == 'Admin';
 
     try {
       Map<String, dynamic> data = {
@@ -38,6 +49,12 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
         'ownerId': FirebaseAuth.instance.currentUser!.uid,
         'timestamp': FieldValue.serverTimestamp(),
         'condition': selectedCondition,
+        'quantity': quantity,
+        'location': locationController.text.trim(),
+        'rentalPricePerDay': rentalPrice,
+        'availabilityStatus': selectedAvailability,
+        'tags': [],
+        'isApproved': isApprovedByAdmin,
       };
 
       await FirebaseFirestore.instance.collection('equipment').add(data);
@@ -51,9 +68,13 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
 
       nameController.clear();
       descController.clear();
+      quantityController.clear();
+      locationController.clear();
+      priceController.clear();
       setState(() {
         selectedType = null;
         selectedCondition = 5;
+        selectedAvailability = 'available';
       });
     } catch (e) {
       print("Error adding equipment: $e");
@@ -107,6 +128,45 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                     ),
                   ),
                   SizedBox(height: 15),
+                  TextFormField(
+                    controller: quantityController, 
+                    keyboardType: TextInputType.number,
+                     decoration: const InputDecoration(
+                      labelText: "Quantity",
+                       border: OutlineInputBorder()
+                       ),
+                       ),
+                    SizedBox(height: 15),
+
+                  TextFormField(
+                    controller: locationController, 
+                    keyboardType: TextInputType.text, 
+                    decoration: const InputDecoration(
+                      labelText: "Location", 
+                      border: OutlineInputBorder()
+                      ),
+                      ),
+                    SizedBox(height: 15),
+
+                   TextFormField(
+                    controller: priceController,
+                     keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "Rental Price Per Day (Optional)", 
+                        border: OutlineInputBorder()
+                        ),
+                        ),
+                     SizedBox(height: 15),
+
+                     DropdownButtonFormField<String>(
+      value: selectedAvailability,
+      decoration: const InputDecoration(labelText: "Availability Status"),
+      items: availabilityStatuses.map((String value) {
+        return DropdownMenuItem<String>(value: value, child: Text(value));
+      }).toList(),
+      onChanged: (String? newValue) {setState(() {selectedAvailability = newValue!;});},
+    ),
+    SizedBox(height: 15),
 
                   DropdownButtonFormField(
                     value: selectedType,
