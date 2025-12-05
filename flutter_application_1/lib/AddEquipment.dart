@@ -14,7 +14,7 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
   final TextEditingController descController = TextEditingController();
 
   String? selectedType;
-  int selectedCondition = 5; 
+  int selectedCondition = 5;
   final List<String> types = ["Rental", "Exchange", "Donation"];
 
   void saveItem() async {
@@ -86,36 +86,36 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black12, blurRadius: 15, offset: Offset(0, 8)),
+                    color: Colors.black12,
+                    blurRadius: 15,
+                    offset: Offset(0, 8),
+                  ),
                 ],
               ),
               child: Column(
                 children: [
                   TextField(
                     controller: nameController,
-                    decoration: InputDecoration(
-                      labelText: "Equipment Name",
-                    ),
+                    decoration: InputDecoration(labelText: "Equipment Name"),
                   ),
                   SizedBox(height: 15),
 
                   TextField(
                     controller: descController,
                     maxLines: 3,
-                    decoration: InputDecoration(
-                      labelText: "Description",
-                    ),
+                    decoration: InputDecoration(labelText: "Description"),
                   ),
                   SizedBox(height: 15),
 
                   DropdownButtonFormField(
-                    value: selectedType,
-                    items: types.map((type) {
-                      return DropdownMenuItem(
-                        value: type,
-                        child: Text(type),
-                      );
-                    }).toList(),
+                    initialValue: selectedType,
+                    items:
+                        types.map((type) {
+                          return DropdownMenuItem(
+                            value: type,
+                            child: Text(type),
+                          );
+                        }).toList(),
                     onChanged: (value) {
                       setState(() {
                         selectedType = value;
@@ -127,19 +127,17 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
 
                   Row(
                     children: [
-                      Text(
-                        "Condition (1-5):",
-                        style: TextStyle(fontSize: 16),
-                      ),
+                      Text("Condition (1-5):", style: TextStyle(fontSize: 16)),
                       SizedBox(width: 20),
                       DropdownButton<int>(
                         value: selectedCondition,
-                        items: [1, 2, 3, 4, 5].map((value) {
-                          return DropdownMenuItem(
-                            value: value,
-                            child: Text(value.toString()),
-                          );
-                        }).toList(),
+                        items:
+                            [1, 2, 3, 4, 5].map((value) {
+                              return DropdownMenuItem(
+                                value: value,
+                                child: Text(value.toString()),
+                              );
+                            }).toList(),
                         onChanged: (value) {
                           setState(() {
                             selectedCondition = value!;

@@ -32,6 +32,8 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -64,21 +66,23 @@ class _MainScreenState extends State<MainScreen> {
     _pages = [
       HomePage(),
       AddEquipmentPage(),
-      Builder(builder: (_) {
-        User? user = FirebaseAuth.instance.currentUser;
-        if (user == null) {
-          return LoginPage(
-            onSignupTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => SignupPage()),
-              );
-            },
-          );
-        } else {
-          return ProfilePage();
-        }
-      }),
+      Builder(
+        builder: (_) {
+          User? user = FirebaseAuth.instance.currentUser;
+          if (user == null) {
+            return LoginPage(
+              onSignupTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => SignupPage()),
+                );
+              },
+            );
+          } else {
+            return ProfilePage();
+          }
+        },
+      ),
     ];
   }
 
@@ -110,8 +114,10 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: Container(
               padding: EdgeInsets.all(8),
-              decoration:
-                  BoxDecoration(color: Color(0xFF6B8D45), shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: Color(0xFF6B8D45),
+                shape: BoxShape.circle,
+              ),
               child: Icon(Icons.add, color: Colors.white, size: 28),
             ),
             label: "",

@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login.dart';
 
 class ProfilePage extends StatelessWidget {
-  const ProfilePage({Key? key}) : super(key: key);
+  const ProfilePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -15,9 +15,7 @@ class ProfilePage extends StatelessWidget {
         Navigator.pushReplacementNamed(context, "/login");
       });
 
-      return Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -28,10 +26,11 @@ class ProfilePage extends StatelessWidget {
         backgroundColor: const Color(0xFF6B8D45),
       ),
       body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection("users")
-            .doc(user.uid)
-            .snapshots(),
+        stream:
+            FirebaseFirestore.instance
+                .collection("users")
+                .doc(user.uid)
+                .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -50,7 +49,11 @@ class ProfilePage extends StatelessWidget {
                 CircleAvatar(
                   radius: 55,
                   backgroundColor: Colors.green.shade200,
-                  child: const Icon(Icons.person, size: 60, color: Colors.white),
+                  child: const Icon(
+                    Icons.person,
+                    size: 60,
+                    color: Colors.white,
+                  ),
                 ),
 
                 const SizedBox(height: 20),
@@ -58,7 +61,9 @@ class ProfilePage extends StatelessWidget {
                 Text(
                   data['name'] ?? '',
                   style: const TextStyle(
-                      fontSize: 22, fontWeight: FontWeight.bold),
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
 
                 const SizedBox(height: 6),
@@ -70,11 +75,7 @@ class ProfilePage extends StatelessWidget {
 
                 const SizedBox(height: 30),
 
-                profileTile(
-                  Icons.phone,
-                  "Phone",
-                  data['phone'],
-                ),
+                profileTile(Icons.phone, "Phone", data['phone']),
 
                 const SizedBox(height: 30),
 
@@ -84,8 +85,8 @@ class ProfilePage extends StatelessWidget {
                     onPressed: () async {
                       await FirebaseAuth.instance.signOut();
                       Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => LoginPage()),
+                        context,
+                        MaterialPageRoute(builder: (_) => LoginPage()),
                       );
                     },
                     style: ElevatedButton.styleFrom(
@@ -119,7 +120,7 @@ class ProfilePage extends StatelessWidget {
             color: Colors.black12,
             blurRadius: 10,
             offset: Offset(0, 5),
-          )
+          ),
         ],
       ),
       child: Row(
@@ -132,15 +133,18 @@ class ProfilePage extends StatelessWidget {
               Text(
                 title,
                 style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500),
+                  fontSize: 14,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 value ?? "Not available",
                 style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.bold),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
