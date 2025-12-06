@@ -9,6 +9,8 @@ import 'AddEquipment.dart';
 import 'profile.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'admin_reservations.dart';
+import 'adminReview.dart';
+import 'adminTasks.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -101,8 +103,8 @@ class _MainScreenState extends State<MainScreen> {
       const HomePage(),
 
       _buildAuthProtectedPage(
-        _userRole == 'Admin'
-            ? const AdminReservationsPage()
+        _userRole == 'Donor' || _userRole == 'Admin'
+            ? const AdminTasksPage()
             : const Center(
                 child: Text('User Reservations Page (Placeholder)'),
               ),
