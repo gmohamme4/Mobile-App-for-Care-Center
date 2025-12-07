@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login.dart';
+import 'admin_tools.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -15,9 +16,7 @@ class ProfilePage extends StatelessWidget {
         Navigator.pushReplacementNamed(context, "/login");
       });
 
-      return Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -28,10 +27,11 @@ class ProfilePage extends StatelessWidget {
         backgroundColor: const Color(0xFF6B8D45),
       ),
       body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection("users")
-            .doc(user.uid)
-            .snapshots(),
+        stream:
+            FirebaseFirestore.instance
+                .collection("users")
+                .doc(user.uid)
+                .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -41,10 +41,9 @@ class ProfilePage extends StatelessWidget {
             return const Center(child: Text("No user data found"));
           }
 
-
-        var userData = snapshot.data!.data() as Map<String, dynamic>;
-        String role = userData['role'] ?? 'Guest';
-        String nationalId = userData['nationalId'] ?? 'N/A';
+          var userData = snapshot.data!.data() as Map<String, dynamic>;
+          String role = userData['role'] ?? 'Guest';
+          String nationalId = userData['nationalId'] ?? 'N/A';
 
           var data = snapshot.data!.data() as Map<String, dynamic>;
 
@@ -55,16 +54,21 @@ class ProfilePage extends StatelessWidget {
                 CircleAvatar(
                   radius: 55,
                   backgroundColor: Colors.green.shade200,
-                  child: const Icon(Icons.person, size: 60, color: Colors.white),
+                  child: const Icon(
+                    Icons.person,
+                    size: 60,
+                    color: Colors.white,
+                  ),
                 ),
 
                 const SizedBox(height: 20),
 
-
                 Text(
                   data['name'] ?? '',
                   style: const TextStyle(
-                      fontSize: 22, fontWeight: FontWeight.bold),
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
 
                 const SizedBox(height: 6),
@@ -76,27 +80,51 @@ class ProfilePage extends StatelessWidget {
 
                 const SizedBox(height: 30),
 
+                profileTile(Icons.phone, "Phone", data['phone']),
+                const SizedBox(height: 20),
+
+                profileTile(Icons.person_pin_circle, "User Role", role),
+
+                const SizedBox(height: 20),
                 profileTile(
-                  Icons.phone,
-                  "Phone",
-                  data['phone'],
+                  Icons.badge,
+                  "National ID / Registration ID",
+                  nationalId,
                 ),
-                const SizedBox(height: 20),
 
-                profileTile(
-                  Icons.person_pin_circle, 
-                  "User Role", 
-                  role
-                  ),
+                const SizedBox(height: 30),
 
-                const SizedBox(height: 20),
-                  profileTile(
-                    Icons.badge, 
-                    "National ID / Registration ID", 
-                    nationalId
+                // Admin Tools Button (only show for admins)
+                if (role == 'Admin')
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AdminToolsPage(),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6B8D45),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.admin_panel_settings),
+                      label: const Text(
+                        "Admin Tools",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
-             
-                  const SizedBox(height: 30),
+                  ),
 
                 SizedBox(
                   width: double.infinity,
@@ -104,8 +132,8 @@ class ProfilePage extends StatelessWidget {
                     onPressed: () async {
                       await FirebaseAuth.instance.signOut();
                       Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => LoginPage()),
+                        context,
+                        MaterialPageRoute(builder: (_) => LoginPage()),
                       );
                     },
                     style: ElevatedButton.styleFrom(
@@ -139,7 +167,7 @@ class ProfilePage extends StatelessWidget {
             color: Colors.black12,
             blurRadius: 10,
             offset: Offset(0, 5),
-          )
+          ),
         ],
       ),
       child: Row(
@@ -152,15 +180,18 @@ class ProfilePage extends StatelessWidget {
               Text(
                 title,
                 style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500),
+                  fontSize: 14,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 value ?? "Not available",
                 style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.bold),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),

@@ -9,6 +9,7 @@ import 'AddEquipment.dart';
 import 'profile.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'adminTasks.dart';
+import 'admin_tools.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
