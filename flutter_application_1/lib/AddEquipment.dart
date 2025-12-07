@@ -4,8 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class AddEquipmentPage extends StatefulWidget {
   final String? userRole;
- const AddEquipmentPage({super.key, this.userRole});
-
+  const AddEquipmentPage({super.key, this.userRole});
 
   @override
   _AddEquipmentPageState createState() => _AddEquipmentPageState();
@@ -19,10 +18,14 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
   final TextEditingController priceController = TextEditingController();
 
   String selectedAvailability = 'available';
-  final List<String> availabilityStatuses = ["available", "rented", "under maintenance"];
+  final List<String> availabilityStatuses = [
+    "available",
+    "rented",
+    "under maintenance",
+  ];
 
   String? selectedType;
-  int selectedCondition = 5; 
+  int selectedCondition = 5;
   final List<String> types = ["Rental", "Exchange", "Donation"];
 
   void saveItem() async {
@@ -53,8 +56,8 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
         'rentalPricePerDay': rentalPrice,
         'availabilityStatus': selectedAvailability,
         'tags': [],
-        'isApproved': (widget.userRole == 'Admin' || widget.userRole == 'Donor') ? true : false,  
-            };
+        'isApproved': false, // All items require admin approval
+      };
 
       await FirebaseFirestore.instance.collection('equipment').add(data);
 
@@ -106,75 +109,85 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black12, blurRadius: 15, offset: Offset(0, 8)),
+                    color: Colors.black12,
+                    blurRadius: 15,
+                    offset: Offset(0, 8),
+                  ),
                 ],
               ),
               child: Column(
                 children: [
                   TextField(
                     controller: nameController,
-                    decoration: InputDecoration(
-                      labelText: "Equipment Name",
-                    ),
+                    decoration: InputDecoration(labelText: "Equipment Name"),
                   ),
                   SizedBox(height: 15),
 
                   TextField(
                     controller: descController,
                     maxLines: 3,
-                    decoration: InputDecoration(
-                      labelText: "Description",
-                    ),
+                    decoration: InputDecoration(labelText: "Description"),
                   ),
                   SizedBox(height: 15),
                   TextFormField(
-                    controller: quantityController, 
+                    controller: quantityController,
                     keyboardType: TextInputType.number,
-                     decoration: const InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: "Quantity",
-                       border: OutlineInputBorder()
-                       ),
-                       ),
-                    SizedBox(height: 15),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  SizedBox(height: 15),
 
                   TextFormField(
-                    controller: locationController, 
-                    keyboardType: TextInputType.text, 
+                    controller: locationController,
+                    keyboardType: TextInputType.text,
                     decoration: const InputDecoration(
-                      labelText: "Location", 
-                      border: OutlineInputBorder()
-                      ),
-                      ),
-                    SizedBox(height: 15),
+                      labelText: "Location",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  SizedBox(height: 15),
 
-                   TextFormField(
+                  TextFormField(
                     controller: priceController,
-                     keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: "Rental Price Per Day (Optional)", 
-                        border: OutlineInputBorder()
-                        ),
-                        ),
-                     SizedBox(height: 15),
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: "Rental Price Per Day (Optional)",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  SizedBox(height: 15),
 
-                     DropdownButtonFormField<String>(
-      value: selectedAvailability,
-      decoration: const InputDecoration(labelText: "Availability Status"),
-      items: availabilityStatuses.map((String value) {
-        return DropdownMenuItem<String>(value: value, child: Text(value));
-      }).toList(),
-      onChanged: (String? newValue) {setState(() {selectedAvailability = newValue!;});},
-    ),
-    SizedBox(height: 15),
+                  DropdownButtonFormField<String>(
+                    value: selectedAvailability,
+                    decoration: const InputDecoration(
+                      labelText: "Availability Status",
+                    ),
+                    items:
+                        availabilityStatuses.map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        selectedAvailability = newValue!;
+                      });
+                    },
+                  ),
+                  SizedBox(height: 15),
 
                   DropdownButtonFormField(
                     value: selectedType,
-                    items: types.map((type) {
-                      return DropdownMenuItem(
-                        value: type,
-                        child: Text(type),
-                      );
-                    }).toList(),
+                    items:
+                        types.map((type) {
+                          return DropdownMenuItem(
+                            value: type,
+                            child: Text(type),
+                          );
+                        }).toList(),
                     onChanged: (value) {
                       setState(() {
                         selectedType = value;
@@ -186,19 +199,17 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
 
                   Row(
                     children: [
-                      Text(
-                        "Condition (1-5):",
-                        style: TextStyle(fontSize: 16),
-                      ),
+                      Text("Condition (1-5):", style: TextStyle(fontSize: 16)),
                       SizedBox(width: 20),
                       DropdownButton<int>(
                         value: selectedCondition,
-                        items: [1, 2, 3, 4, 5].map((value) {
-                          return DropdownMenuItem(
-                            value: value,
-                            child: Text(value.toString()),
-                          );
-                        }).toList(),
+                        items:
+                            [1, 2, 3, 4, 5].map((value) {
+                              return DropdownMenuItem(
+                                value: value,
+                                child: Text(value.toString()),
+                              );
+                            }).toList(),
                         onChanged: (value) {
                           setState(() {
                             selectedCondition = value!;

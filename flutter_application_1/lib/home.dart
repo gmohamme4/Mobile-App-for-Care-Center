@@ -19,6 +19,7 @@ class _HomePageState extends State<HomePage> {
 
   String? _userName;
   String? _userRole;
+  String? _currentUserId;
 
   @override
   void initState() {
@@ -30,6 +31,7 @@ class _HomePageState extends State<HomePage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
+        _currentUserId = user.uid;
         final userData =
             await FirebaseFirestore.instance
                 .collection('users')
@@ -278,14 +280,9 @@ class _HomePageState extends State<HomePage> {
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
                   stream:
-                      _userRole == 'Admin'
-                          ? FirebaseFirestore.instance
-                              .collection("equipment")
-                              .snapshots()
-                          : FirebaseFirestore.instance
-                              .collection("equipment")
-                              .where('isApproved', isEqualTo: true)
-                              .snapshots(),
+                      FirebaseFirestore.instance
+                          .collection("equipment")
+                          .snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
@@ -311,9 +308,25 @@ class _HomePageState extends State<HomePage> {
                             )
                             .toList();
 
+                    // Filter based on approval status and ownership
+                    final visibleEquipment =
+                        allEquipment.where((item) {
+                          final isApproved =
+                              item['isApproved'] as bool? ?? false;
+                          final ownerId = item['ownerId'] as String? ?? '';
+                          final isOwner = _currentUserId == ownerId;
+                          final isAdmin = _userRole == 'Admin';
+
+                          // Show if: approved OR (unapproved AND owner) OR admin
+                          if (isApproved || isOwner || isAdmin) {
+                            return true;
+                          }
+                          return false;
+                        }).toList();
+
                     // Apply filters
                     final filteredEquipment =
-                        allEquipment.where((item) {
+                        visibleEquipment.where((item) {
                           bool matchesSearch =
                               item['name'] != null &&
                               (item['name'].toString().toLowerCase().contains(
@@ -348,6 +361,7 @@ class _HomePageState extends State<HomePage> {
                       itemBuilder: (context, index) {
                         final item = filteredEquipment[index];
                         final equipmentId = item['id'] as String;
+                        final isApproved = item['isApproved'] as bool? ?? false;
                         int rating = item['condition'] ?? 0;
 
                         return Card(
@@ -355,78 +369,109 @@ class _HomePageState extends State<HomePage> {
                             borderRadius: BorderRadius.circular(15),
                           ),
                           elevation: 4,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(15),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => EquipmentDetailPage(
-                                        equipment: item,
-                                        equipmentId: equipmentId,
+                          child: Stack(
+                            children: [
+                              InkWell(
+                                borderRadius: BorderRadius.circular(15),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => EquipmentDetailPage(
+                                            equipment: item,
+                                            equipmentId: equipmentId,
+                                          ),
+                                    ),
+                                  );
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        item['name'] ?? '',
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
                                       ),
+                                      Text(
+                                        item['description'] ?? '',
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[700],
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Color(0xFFBFE699),
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          item['type'] ?? '',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      Row(
+                                        children: List.generate(
+                                          5,
+                                          (i) => Icon(
+                                            Icons.star,
+                                            size: 16,
+                                            color:
+                                                i < rating
+                                                    ? Color(0xFF6B8D45)
+                                                    : Colors.grey[400],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              );
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(12.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    item['name'] ?? '',
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  Text(
-                                    item['description'] ?? '',
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[700],
-                                    ),
-                                  ),
-                                  Container(
+                              ),
+                              // Pending badge for unapproved items
+                              if (!isApproved)
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: Container(
                                     padding: EdgeInsets.symmetric(
-                                      horizontal: 10,
+                                      horizontal: 8,
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Color(0xFFBFE699),
-                                      borderRadius: BorderRadius.circular(20),
+                                      color: Colors.orange,
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
-                                      item['type'] ?? '',
+                                      'Pending',
                                       style: TextStyle(
-                                        fontSize: 12,
+                                        color: Colors.white,
+                                        fontSize: 10,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
-                                  Row(
-                                    children: List.generate(
-                                      5,
-                                      (i) => Icon(
-                                        Icons.star,
-                                        size: 16,
-                                        color:
-                                            i < rating
-                                                ? Color(0xFF6B8D45)
-                                                : Colors.grey[400],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                                ),
+                            ],
                           ),
                         );
                       },

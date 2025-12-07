@@ -74,6 +74,31 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
     }
   }
 
+  Future<void> _approveEquipment() async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('equipment')
+          .doc(widget.equipmentId)
+          .update({'isApproved': true});
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("✔ Equipment approved successfully"),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("❌ Error approving equipment: $e"),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final equipment = widget.equipment;
@@ -259,6 +284,34 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
               _buildExchangeButton()
             else
               _buildDonationButton(),
+
+            // Admin Approve Button (only show if not approved)
+            if (_userRole == 'Admin' &&
+                !(widget.equipment['isApproved'] as bool? ?? false))
+              Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton.icon(
+                    onPressed: _approveEquipment,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.check_circle),
+                    label: const Text(
+                      "Approve Equipment",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
 
             // Admin Delete Button
             if (_userRole == 'Admin')
