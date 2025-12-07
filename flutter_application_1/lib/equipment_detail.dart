@@ -20,12 +20,14 @@ class EquipmentDetailPage extends StatefulWidget {
 class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
   late int _selectedQuantity;
   String? _userRole;
+  late Map<String, dynamic> _equipmentLocal;
 
   @override
   void initState() {
     super.initState();
     _selectedQuantity = 1;
     _checkUserRole();
+    _equipmentLocal = Map<String, dynamic>.from(widget.equipment);
   }
 
   Future<void> _checkUserRole() async {
@@ -99,9 +101,151 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
     }
   }
 
+  Future<void> _showEditDialog() async {
+    final current = Map<String, dynamic>.from(_equipmentLocal);
+
+    final nameCtrl = TextEditingController(
+      text: (current['name'] ?? '').toString(),
+    );
+    final descCtrl = TextEditingController(
+      text: (current['description'] ?? '').toString(),
+    );
+    final typeCtrl = TextEditingController(
+      text: (current['type'] ?? '').toString(),
+    );
+    final locationCtrl = TextEditingController(
+      text: (current['location'] ?? '').toString(),
+    );
+    final conditionCtrl = TextEditingController(
+      text: (current['condition'] ?? '').toString(),
+    );
+    final quantityCtrl = TextEditingController(
+      text: (current['quantity'] ?? '').toString(),
+    );
+    final priceCtrl = TextEditingController(
+      text: (current['rentalPricePerDay'] ?? '').toString(),
+    );
+    final availabilityCtrl = TextEditingController(
+      text: (current['availabilityStatus'] ?? '').toString(),
+    );
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Equipment'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Name'),
+                ),
+                TextField(
+                  controller: descCtrl,
+                  decoration: const InputDecoration(labelText: 'Description'),
+                ),
+                TextField(
+                  controller: typeCtrl,
+                  decoration: const InputDecoration(labelText: 'Type'),
+                ),
+                TextField(
+                  controller: locationCtrl,
+                  decoration: const InputDecoration(labelText: 'Location'),
+                ),
+                TextField(
+                  controller: conditionCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Condition (0-5)',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                TextField(
+                  controller: quantityCtrl,
+                  decoration: const InputDecoration(labelText: 'Quantity'),
+                  keyboardType: TextInputType.number,
+                ),
+                TextField(
+                  controller: priceCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Rental Price Per Day',
+                  ),
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                ),
+                TextField(
+                  controller: availabilityCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Availability Status',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+
+                // Build updated map
+                final updated = <String, dynamic>{
+                  'name': nameCtrl.text.trim(),
+                  'description': descCtrl.text.trim(),
+                  'type': typeCtrl.text.trim(),
+                  'location': locationCtrl.text.trim(),
+                  'condition':
+                      int.tryParse(conditionCtrl.text.trim()) ??
+                      (current['condition'] ?? 0),
+                  'quantity':
+                      int.tryParse(quantityCtrl.text.trim()) ??
+                      (current['quantity'] ?? 0),
+                  'rentalPricePerDay':
+                      double.tryParse(priceCtrl.text.trim()) ??
+                      (current['rentalPricePerDay'] ?? 0),
+                  'availabilityStatus': availabilityCtrl.text.trim(),
+                };
+
+                try {
+                  await FirebaseFirestore.instance
+                      .collection('equipment')
+                      .doc(widget.equipmentId)
+                      .update(updated);
+
+                  setState(() {
+                    // merge updates into local equipment map
+                    _equipmentLocal.addAll(updated);
+                  });
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('✔ Equipment updated'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('❌ Error updating equipment: $e'),
+                      backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final equipment = widget.equipment;
+    final equipment = _equipmentLocal;
     final int condition = equipment['condition'] ?? 0;
     final int quantity = equipment['quantity'] ?? 0;
     final double rentalPrice = (equipment['rentalPricePerDay'] ?? 0).toDouble();
@@ -287,7 +431,7 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
 
             // Admin Approve Button (only show if not approved)
             if (_userRole == 'Admin' &&
-                !(widget.equipment['isApproved'] as bool? ?? false))
+                !(equipment['isApproved'] as bool? ?? false))
               Padding(
                 padding: const EdgeInsets.only(top: 16.0),
                 child: SizedBox(
@@ -366,6 +510,33 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                   ),
                 ),
               ),
+
+            // Admin Edit Button
+            if (_userRole == 'Admin')
+              Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton.icon(
+                    onPressed: _showEditDialog,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueGrey,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.edit),
+                    label: const Text(
+                      "Edit Item",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             const SizedBox(height: 20),
           ],
         ),
@@ -420,7 +591,11 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
 
   Widget _buildReservationButton(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final isAvailable = widget.equipment['availabilityStatus'] == 'available';
+    final isAvailable =
+        (_equipmentLocal['availabilityStatus'] ?? '')
+            .toString()
+            .toLowerCase() ==
+        'available';
 
     return SizedBox(
       width: double.infinity,
@@ -434,7 +609,7 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                     MaterialPageRoute(
                       builder:
                           (context) => ReservationPage(
-                            equipment: widget.equipment,
+                            equipment: _equipmentLocal,
                             equipmentId: widget.equipmentId,
                           ),
                     ),
