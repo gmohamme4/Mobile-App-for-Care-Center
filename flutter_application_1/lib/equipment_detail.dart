@@ -41,19 +41,11 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
         if (userData.exists) {
           setState(() {
             _userRole = userData.data()?['role'];
-            _isLoadingRole = false;
           });
         }
       } catch (e) {
         print("Error fetching user role: $e");
-        setState(() {
-          _isLoadingRole = false;
-        });
       }
-    } else {
-      setState(() {
-        _isLoadingRole = false;
-      });
     }
   }
 
