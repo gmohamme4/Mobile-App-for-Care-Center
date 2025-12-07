@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
 import 'reservation_page.dart';
 
 class EquipmentDetailPage extends StatefulWidget {
@@ -52,11 +53,23 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
   }
 
   Future<void> _deleteEquipment() async {
+    final id = widget.equipmentId?.toString() ?? '';
+    if (id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ Invalid equipment id'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
     try {
       await FirebaseFirestore.instance
           .collection('equipment')
-          .doc(widget.equipmentId)
-          .delete();
+          .doc(id)
+          .delete()
+          .timeout(const Duration(seconds: 10));
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -67,6 +80,17 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
 
       Navigator.pop(context);
     } catch (e) {
+      if (e is TimeoutException) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              '❌ Operation timed out. Check network and try again.',
+            ),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("❌ Error deleting equipment: $e"),
@@ -77,11 +101,23 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
   }
 
   Future<void> _approveEquipment() async {
+    final id = widget.equipmentId?.toString() ?? '';
+    if (id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ Invalid equipment id'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
     try {
       await FirebaseFirestore.instance
           .collection('equipment')
-          .doc(widget.equipmentId)
-          .update({'isApproved': true});
+          .doc(id)
+          .update({'isApproved': true})
+          .timeout(const Duration(seconds: 10));
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -92,6 +128,17 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
 
       Navigator.pop(context);
     } catch (e) {
+      if (e is TimeoutException) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              '❌ Operation timed out. Check network and try again.',
+            ),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("❌ Error approving equipment: $e"),
@@ -210,10 +257,22 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                 };
 
                 try {
+                  final id = widget.equipmentId?.toString() ?? '';
+                  if (id.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('❌ Invalid equipment id'),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    );
+                    return;
+                  }
+
                   await FirebaseFirestore.instance
                       .collection('equipment')
-                      .doc(widget.equipmentId)
-                      .update(updated);
+                      .doc(id)
+                      .update(updated)
+                      .timeout(const Duration(seconds: 10));
 
                   setState(() {
                     // merge updates into local equipment map
