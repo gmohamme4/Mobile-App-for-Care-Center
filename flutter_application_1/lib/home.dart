@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'equipment_detail.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -341,8 +342,21 @@ class _HomePageState extends State<HomePage> {
                               elevation: 4,
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(15),
-                                onTap:
-                                    () => print("Clicked on ${item['name']}"),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => EquipmentDetailPage(
+                                            equipment: item,
+                                            equipmentId:
+                                                filteredEquipment
+                                                    .indexOf(item)
+                                                    .toString(),
+                                          ),
+                                    ),
+                                  );
+                                },
                                 child: Padding(
                                   padding: const EdgeInsets.all(12.0),
                                   child: Column(
