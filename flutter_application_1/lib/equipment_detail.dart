@@ -42,6 +42,7 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                 .get();
 
         if (userData.exists) {
+          if (!mounted) return;
           setState(() {
             _userRole = userData.data()?['role'];
           });
@@ -53,8 +54,8 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
   }
 
   Future<void> _deleteEquipment() async {
-    final id = widget.equipmentId?.toString() ?? '';
-    if (id.isEmpty) {
+    final id = widget.equipmentId;
+    if (id.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('❌ Invalid equipment id'),
@@ -71,44 +72,52 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
           .delete()
           .timeout(const Duration(seconds: 10));
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("✔ Equipment deleted successfully"),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      Navigator.pop(context);
-    } catch (e) {
-      if (e is TimeoutException) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-              '❌ Operation timed out. Check network and try again.',
+            content: Text("✔ Equipment deleted successfully"),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (e is TimeoutException) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                '❌ Operation timed out. Check network and try again.',
+              ),
+              backgroundColor: Colors.redAccent,
             ),
+          );
+        }
+        return;
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("❌ Error deleting equipment: $e"),
             backgroundColor: Colors.redAccent,
           ),
         );
-        return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("❌ Error deleting equipment: $e"),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
     }
   }
 
   Future<void> _approveEquipment() async {
-    final id = widget.equipmentId?.toString() ?? '';
-    if (id.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('❌ Invalid equipment id'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+    final id = widget.equipmentId;
+    if (id.trim().isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ Invalid equipment id'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
       return;
     }
 
@@ -119,32 +128,38 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
           .update({'isApproved': true})
           .timeout(const Duration(seconds: 10));
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("✔ Equipment approved successfully"),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      Navigator.pop(context);
-    } catch (e) {
-      if (e is TimeoutException) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-              '❌ Operation timed out. Check network and try again.',
+            content: Text("✔ Equipment approved successfully"),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (e is TimeoutException) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                '❌ Operation timed out. Check network and try again.',
+              ),
+              backgroundColor: Colors.redAccent,
             ),
+          );
+        }
+        return;
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("❌ Error approving equipment: $e"),
             backgroundColor: Colors.redAccent,
           ),
         );
-        return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("❌ Error approving equipment: $e"),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
     }
   }
 
@@ -274,10 +289,12 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                       .update(updated)
                       .timeout(const Duration(seconds: 10));
 
-                  setState(() {
-                    // merge updates into local equipment map
-                    _equipmentLocal.addAll(updated);
-                  });
+                  if (mounted) {
+                    setState(() {
+                      // merge updates into local equipment map
+                      _equipmentLocal.addAll(updated);
+                    });
+                  }
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
