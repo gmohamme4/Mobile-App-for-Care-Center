@@ -254,11 +254,12 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                 Navigator.of(context).pop();
 
                 // Build updated map (only include non-empty string fields)
-                final int parsedCondition = (int.tryParse(
-                          conditionCtrl.text.trim(),
-                        ) ??
-                        (current['condition'] ?? 0))
-                    .clamp(0, 5);
+                int parsedCondition =
+                    int.tryParse(conditionCtrl.text.trim()) ??
+                    (current['condition'] ?? 0);
+                if (parsedCondition < 0) parsedCondition = 0;
+                if (parsedCondition > 5) parsedCondition = 5;
+
                 int parsedQuantity =
                     int.tryParse(quantityCtrl.text.trim()) ??
                     (current['quantity'] ?? 0);
@@ -285,14 +286,16 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
                 );
 
                 try {
-                  final id = widget.equipmentId?.toString() ?? '';
-                  if (id.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('❌ Invalid equipment id'),
-                        backgroundColor: Colors.redAccent,
-                      ),
-                    );
+                  final id = widget.equipmentId;
+                  if (id.trim().isEmpty) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('❌ Invalid equipment id'),
+                          backgroundColor: Colors.redAccent,
+                        ),
+                      );
+                    }
                     return;
                   }
 
