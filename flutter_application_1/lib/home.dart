@@ -16,52 +16,14 @@ class _HomePageState extends State<HomePage> {
   String _selectedFilter = "All";
   final PageController _pageController = PageController();
   int currentIndex = 0;
-  bool isLoading = true;
 
   String? _userName;
   String? _userRole;
-
-  List<Map<String, dynamic>> _equipment = [];
-  Map<int, String> _equipmentIds = {}; // Map to store document IDs
 
   @override
   void initState() {
     super.initState();
     _checkUserAndFetchName();
-    fetchItems();
-  }
-
-  Future<void> fetchItems() async {
-    try {
-      late QuerySnapshot data;
-
-      // If admin, show all items; otherwise show only approved items
-      if (_userRole == 'Admin') {
-        data = await FirebaseFirestore.instance.collection("equipment").get();
-      } else {
-        data =
-            await FirebaseFirestore.instance
-                .collection("equipment")
-                .where('isApproved', isEqualTo: true)
-                .get();
-      }
-
-      setState(() {
-        _equipment =
-            data.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
-        // Store document IDs for later use
-        _equipmentIds.clear();
-        for (int i = 0; i < data.docs.length; i++) {
-          _equipmentIds[i] = data.docs[i].id;
-        }
-        isLoading = false;
-      });
-    } catch (e) {
-      print("Error fetching equipment: $e");
-      setState(() {
-        isLoading = false;
-      });
-    }
   }
 
   Future<void> _checkUserAndFetchName() async {
@@ -88,21 +50,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    List<Map<String, dynamic>> filteredEquipment =
-        _equipment.where((item) {
-          bool matchesSearch =
-              item['name'] != null &&
-              (item['name'].toString().toLowerCase().contains(
-                    _searchQuery.toLowerCase(),
-                  ) ||
-                  (item['description']?.toLowerCase() ?? "").contains(
-                    _searchQuery.toLowerCase(),
-                  ));
-          bool matchesFilter =
-              _selectedFilter == "All" ? true : item['type'] == _selectedFilter;
-          return matchesSearch && matchesFilter;
-        }).toList();
-
     Widget buildServiceChip(String label, IconData icon, bool isSelected) {
       return GestureDetector(
         onTap: () {
@@ -327,121 +274,165 @@ class _HomePageState extends State<HomePage> {
               ),
               SizedBox(height: 10),
 
-              // Equipment Grid
+              // Equipment Grid with Real-time Updates
               Expanded(
-                child:
-                    isLoading
-                        ? Center(child: CircularProgressIndicator())
-                        : filteredEquipment.isEmpty
-                        ? Center(
-                          child: Text(
-                            "No equipment found",
-                            style: TextStyle(fontSize: 16),
-                          ),
-                        )
-                        : GridView.builder(
-                          itemCount: filteredEquipment.length,
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12,
-                                childAspectRatio: 0.85,
-                              ),
-                          itemBuilder: (context, index) {
-                            final item = filteredEquipment[index];
-                            final originalIndex = _equipment.indexOf(item);
-                            final equipmentId =
-                                _equipmentIds[originalIndex] ?? '';
-                            int rating = item['condition'] ?? 0;
+                child: StreamBuilder<QuerySnapshot>(
+                  stream:
+                      _userRole == 'Admin'
+                          ? FirebaseFirestore.instance
+                              .collection("equipment")
+                              .snapshots()
+                          : FirebaseFirestore.instance
+                              .collection("equipment")
+                              .where('isApproved', isEqualTo: true)
+                              .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                            return Card(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                              elevation: 4,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(15),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) => EquipmentDetailPage(
-                                            equipment: item,
-                                            equipmentId: equipmentId,
-                                          ),
-                                    ),
-                                  );
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12.0),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        item['name'] ?? '',
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-
-                                      Text(
-                                        item['description'] ?? '',
-                                        maxLines: 3,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[700],
-                                        ),
-                                      ),
-
-                                      Container(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Color(0xFFBFE699),
-                                          borderRadius: BorderRadius.circular(
-                                            20,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          item['type'] ?? '',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-
-                                      Row(
-                                        children: List.generate(
-                                          5,
-                                          (i) => Icon(
-                                            Icons.star,
-                                            size: 16,
-                                            color:
-                                                i < rating
-                                                    ? Color(0xFF6B8D45)
-                                                    : Colors.grey[400],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          "No equipment found",
+                          style: TextStyle(fontSize: 16),
                         ),
+                      );
+                    }
+
+                    final docs = snapshot.data!.docs;
+                    final allEquipment =
+                        docs
+                            .map(
+                              (doc) => {
+                                ...doc.data() as Map<String, dynamic>,
+                                'id': doc.id,
+                              },
+                            )
+                            .toList();
+
+                    // Apply filters
+                    final filteredEquipment =
+                        allEquipment.where((item) {
+                          bool matchesSearch =
+                              item['name'] != null &&
+                              (item['name'].toString().toLowerCase().contains(
+                                    _searchQuery.toLowerCase(),
+                                  ) ||
+                                  (item['description']?.toLowerCase() ?? "")
+                                      .contains(_searchQuery.toLowerCase()));
+                          bool matchesFilter =
+                              _selectedFilter == "All"
+                                  ? true
+                                  : item['type'] == _selectedFilter;
+                          return matchesSearch && matchesFilter;
+                        }).toList();
+
+                    if (filteredEquipment.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          "No equipment found",
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      );
+                    }
+
+                    return GridView.builder(
+                      itemCount: filteredEquipment.length,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 0.85,
+                      ),
+                      itemBuilder: (context, index) {
+                        final item = filteredEquipment[index];
+                        final equipmentId = item['id'] as String;
+                        int rating = item['condition'] ?? 0;
+
+                        return Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          elevation: 4,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(15),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => EquipmentDetailPage(
+                                        equipment: item,
+                                        equipmentId: equipmentId,
+                                      ),
+                                ),
+                              );
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    item['name'] ?? '',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  Text(
+                                    item['description'] ?? '',
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Color(0xFFBFE699),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      item['type'] ?? '',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  Row(
+                                    children: List.generate(
+                                      5,
+                                      (i) => Icon(
+                                        Icons.star,
+                                        size: 16,
+                                        color:
+                                            i < rating
+                                                ? Color(0xFF6B8D45)
+                                                : Colors.grey[400],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
               ),
             ],
           ),

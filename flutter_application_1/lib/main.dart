@@ -117,7 +117,7 @@ class _MainScreenState extends State<MainScreen> {
           DocumentSnapshot doc =
               await FirebaseFirestore.instance
                   .collection('users')
-                  .doc(user.uid)
+                  .doc(user.uid) // user is non-null here due to if check above
                   .get();
           if (doc.exists) {
             setState(() {
