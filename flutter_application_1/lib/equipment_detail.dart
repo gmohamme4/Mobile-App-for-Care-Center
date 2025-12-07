@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'reservation_page.dart';
 
 class EquipmentDetailPage extends StatefulWidget {
@@ -18,11 +19,68 @@ class EquipmentDetailPage extends StatefulWidget {
 
 class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
   late int _selectedQuantity;
+  String? _userRole;
+  bool _isLoadingRole = true;
 
   @override
   void initState() {
     super.initState();
     _selectedQuantity = 1;
+    _checkUserRole();
+  }
+
+  Future<void> _checkUserRole() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final userData =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get();
+
+        if (userData.exists) {
+          setState(() {
+            _userRole = userData.data()?['role'];
+            _isLoadingRole = false;
+          });
+        }
+      } catch (e) {
+        print("Error fetching user role: $e");
+        setState(() {
+          _isLoadingRole = false;
+        });
+      }
+    } else {
+      setState(() {
+        _isLoadingRole = false;
+      });
+    }
+  }
+
+  Future<void> _deleteEquipment() async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('equipment')
+          .doc(widget.equipmentId)
+          .delete();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("✔ Equipment deleted successfully"),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("❌ Error deleting equipment: $e"),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
   }
 
   @override
@@ -210,6 +268,60 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
               _buildExchangeButton()
             else
               _buildDonationButton(),
+
+            // Admin Delete Button
+            if (_userRole == 'Admin')
+              Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder:
+                            (context) => AlertDialog(
+                              title: const Text("Delete Equipment"),
+                              content: const Text(
+                                "Are you sure you want to delete this equipment? This action cannot be undone.",
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text("Cancel"),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                    _deleteEquipment();
+                                  },
+                                  child: const Text(
+                                    "Delete",
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                              ],
+                            ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.delete),
+                    label: const Text(
+                      "Delete Item",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             const SizedBox(height: 20),
           ],
         ),

@@ -19,25 +19,41 @@ class _HomePageState extends State<HomePage> {
   bool isLoading = true;
 
   String? _userName;
+  String? _userRole;
 
   List<Map<String, dynamic>> _equipment = [];
+  Map<int, String> _equipmentIds = {}; // Map to store document IDs
 
   @override
   void initState() {
     super.initState();
-    fetchItems();
     _checkUserAndFetchName();
+    fetchItems();
   }
 
   Future<void> fetchItems() async {
     try {
-      final data =
-          await FirebaseFirestore.instance
-              .collection("equipment")
-              .where('isApproved', isEqualTo: true)
-              .get();
+      late QuerySnapshot data;
+
+      // If admin, show all items; otherwise show only approved items
+      if (_userRole == 'Admin') {
+        data = await FirebaseFirestore.instance.collection("equipment").get();
+      } else {
+        data =
+            await FirebaseFirestore.instance
+                .collection("equipment")
+                .where('isApproved', isEqualTo: true)
+                .get();
+      }
+
       setState(() {
-        _equipment = data.docs.map((doc) => doc.data()).toList();
+        _equipment =
+            data.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+        // Store document IDs for later use
+        _equipmentIds.clear();
+        for (int i = 0; i < data.docs.length; i++) {
+          _equipmentIds[i] = data.docs[i].id;
+        }
         isLoading = false;
       });
     } catch (e) {
@@ -61,6 +77,7 @@ class _HomePageState extends State<HomePage> {
         if (userData.exists) {
           setState(() {
             _userName = userData.data()?['name'] ?? user.email;
+            _userRole = userData.data()?['role'];
           });
         }
       } catch (e) {
@@ -333,6 +350,9 @@ class _HomePageState extends State<HomePage> {
                               ),
                           itemBuilder: (context, index) {
                             final item = filteredEquipment[index];
+                            final originalIndex = _equipment.indexOf(item);
+                            final equipmentId =
+                                _equipmentIds[originalIndex] ?? '';
                             int rating = item['condition'] ?? 0;
 
                             return Card(
@@ -349,10 +369,7 @@ class _HomePageState extends State<HomePage> {
                                       builder:
                                           (context) => EquipmentDetailPage(
                                             equipment: item,
-                                            equipmentId:
-                                                filteredEquipment
-                                                    .indexOf(item)
-                                                    .toString(),
+                                            equipmentId: equipmentId,
                                           ),
                                     ),
                                   );

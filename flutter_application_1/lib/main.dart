@@ -45,9 +45,7 @@ class MyApp extends StatelessWidget {
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       initialRoute: '/',
-      routes: {
-        '/': (context) => MainScreen(),
-      },
+      routes: {'/': (context) => MainScreen()},
     );
   }
 }
@@ -105,30 +103,24 @@ class _MainScreenState extends State<MainScreen> {
       _buildAuthProtectedPage(
         _userRole == 'Donor' || _userRole == 'Admin'
             ? const AdminTasksPage()
-            : const Center(
-                child: Text('User Reservations Page (Placeholder)'),
-              ),
+            : const Center(child: Text('User Reservations Page (Placeholder)')),
       ),
 
-     _buildAuthProtectedPage(
-        AddEquipmentPage(userRole: role),
-      ),
+      _buildAuthProtectedPage(AddEquipmentPage(userRole: role)),
 
-    _buildAuthProtectedPage(
-        const ProfilePage(),
-      ),
+      _buildAuthProtectedPage(const ProfilePage()),
     ];
   }
-
 
   void _checkUserRole() {
     FirebaseAuth.instance.authStateChanges().listen((User? user) async {
       if (user != null) {
         try {
-          DocumentSnapshot doc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .get();
+          DocumentSnapshot doc =
+              await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .get();
           if (doc.exists) {
             setState(() {
               _userRole = doc.get('role');
@@ -177,8 +169,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoadingRole) {
-      return const Scaffold(
-          body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -191,15 +182,18 @@ class _MainScreenState extends State<MainScreen> {
         items: [
           _navItem(Icons.home, 0),
           _navItem(
-              _userRole == 'Admin'
-                  ? Icons.supervised_user_circle
-                  : Icons.calendar_today,
-              1),
+            _userRole == 'Admin'
+                ? Icons.supervised_user_circle
+                : Icons.calendar_today,
+            1,
+          ),
           BottomNavigationBarItem(
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: const BoxDecoration(
-                  color: Color(0xFF6B8D45), shape: BoxShape.circle),
+                color: Color(0xFF6B8D45),
+                shape: BoxShape.circle,
+              ),
               child: const Icon(Icons.add, color: Colors.white),
             ),
             label: "",
