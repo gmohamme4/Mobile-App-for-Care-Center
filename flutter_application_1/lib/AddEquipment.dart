@@ -39,7 +39,6 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
     }
     double rentalPrice = double.tryParse(priceController.text) ?? 0.0;
     int quantity = int.tryParse(quantityController.text) ?? 1;
-    final bool isApprovedByAdmin = widget.userRole == 'Admin';
 
     try {
       Map<String, dynamic> data = {
@@ -54,8 +53,8 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
         'rentalPricePerDay': rentalPrice,
         'availabilityStatus': selectedAvailability,
         'tags': [],
-        'isApproved': isApprovedByAdmin,
-      };
+        'isApproved': (widget.userRole == 'Admin' || widget.userRole == 'Donor') ? true : false,  
+            };
 
       await FirebaseFirestore.instance.collection('equipment').add(data);
 
