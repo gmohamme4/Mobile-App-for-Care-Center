@@ -8,8 +8,6 @@ import 'login.dart';
 import 'AddEquipment.dart';
 import 'profile.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'admin_reservations.dart';
-import 'adminReview.dart';
 import 'adminTasks.dart';
 
 void main() async {

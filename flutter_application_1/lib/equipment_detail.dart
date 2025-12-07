@@ -20,7 +20,6 @@ class EquipmentDetailPage extends StatefulWidget {
 class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
   late int _selectedQuantity;
   String? _userRole;
-  bool _isLoadingRole = true;
 
   @override
   void initState() {
