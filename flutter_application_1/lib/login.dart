@@ -9,7 +9,6 @@ class LoginPage extends StatefulWidget {
 
   @override
   _LoginPageState createState() => _LoginPageState();
-  
 }
 
 class _LoginPageState extends State<LoginPage> {
@@ -40,7 +39,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
       );
 
-          Navigator.pushReplacement(
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const MainScreen()),
       );
@@ -61,9 +60,9 @@ class _LoginPageState extends State<LoginPage> {
           ),
         );
       } else if (e.code == 'wrong-password') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("The password is incorrect.")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("The password is incorrect.")));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("An error occurred:${e.message}")),
@@ -108,15 +107,20 @@ class _LoginPageState extends State<LoginPage> {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black12, blurRadius: 15, offset: Offset(0, 8))
+                      color: Colors.black12,
+                      blurRadius: 15,
+                      offset: Offset(0, 8),
+                    ),
                   ],
                 ),
                 child: Column(
                   children: [
                     Text(
                       "Login",
-                      style:
-                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     SizedBox(height: 25),
 
@@ -129,8 +133,9 @@ class _LoginPageState extends State<LoginPage> {
                         filled: true,
                         fillColor: Colors.grey[100],
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none),
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                     ),
                     SizedBox(height: 15),
@@ -145,8 +150,9 @@ class _LoginPageState extends State<LoginPage> {
                         filled: true,
                         fillColor: Colors.grey[100],
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none),
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                     ),
                     SizedBox(height: 25),
@@ -158,7 +164,8 @@ class _LoginPageState extends State<LoginPage> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(15),
                         gradient: LinearGradient(
-                            colors: [Colors.green, Colors.lightGreen]),
+                          colors: [Colors.green, Colors.lightGreen],
+                        ),
                       ),
                       child: ElevatedButton(
                         onPressed: login,
@@ -166,40 +173,41 @@ class _LoginPageState extends State<LoginPage> {
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15)),
+                            borderRadius: BorderRadius.circular(15),
+                          ),
                         ),
                         child: Text(
                           "Login",
                           style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
 
                     SizedBox(height: 20),
                     // Signup link
-             // Signup link
-GestureDetector(
-  onTap: () {
-    if (widget.onSignupTap != null) {
-      widget.onSignupTap!();
-    } else {
- Navigator.pushReplacement(
-  context,
-  MaterialPageRoute(builder: (_) => MainScreen()),
-); // fallback
-    }
-  },
-  child: Text(
-    "Don't have an account? Sign Up",
-    style: TextStyle(
-        color: Colors.green,
-        decoration: TextDecoration.underline),
-  ),
-)
-
+                    GestureDetector(
+                      onTap: () {
+                        if (widget.onSignupTap != null) {
+                          widget.onSignupTap!();
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => SignupPage()),
+                          );
+                        }
+                      },
+                      child: Text(
+                        "Don't have an account? Sign Up",
+                        style: TextStyle(
+                          color: Colors.green,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
