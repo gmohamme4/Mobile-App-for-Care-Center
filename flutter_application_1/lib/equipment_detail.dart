@@ -253,23 +253,36 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
               onPressed: () async {
                 Navigator.of(context).pop();
 
-                // Build updated map
+                // Build updated map (only include non-empty string fields)
+                final int parsedCondition = (int.tryParse(
+                          conditionCtrl.text.trim(),
+                        ) ??
+                        (current['condition'] ?? 0))
+                    .clamp(0, 5);
+                int parsedQuantity =
+                    int.tryParse(quantityCtrl.text.trim()) ??
+                    (current['quantity'] ?? 0);
+                double parsedPrice =
+                    double.tryParse(priceCtrl.text.trim()) ??
+                    (current['rentalPricePerDay'] ?? 0);
+                if (parsedQuantity < 0) parsedQuantity = 0;
+                if (parsedPrice < 0) parsedPrice = 0.0;
+
                 final updated = <String, dynamic>{
                   'name': nameCtrl.text.trim(),
                   'description': descCtrl.text.trim(),
                   'type': typeCtrl.text.trim(),
                   'location': locationCtrl.text.trim(),
-                  'condition':
-                      int.tryParse(conditionCtrl.text.trim()) ??
-                      (current['condition'] ?? 0),
-                  'quantity':
-                      int.tryParse(quantityCtrl.text.trim()) ??
-                      (current['quantity'] ?? 0),
-                  'rentalPricePerDay':
-                      double.tryParse(priceCtrl.text.trim()) ??
-                      (current['rentalPricePerDay'] ?? 0),
+                  'condition': parsedCondition,
+                  'quantity': parsedQuantity,
+                  'rentalPricePerDay': parsedPrice,
                   'availabilityStatus': availabilityCtrl.text.trim(),
                 };
+
+                // Remove any string fields that are empty so we don't accidentally blank existing values
+                updated.removeWhere(
+                  (key, value) => value is String && value.isEmpty,
+                );
 
                 try {
                   final id = widget.equipmentId?.toString() ?? '';
