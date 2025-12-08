@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:async';
 import 'notifications.dart';
 import 'adminTasks.dart';
+import 'user_reservations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -110,7 +111,7 @@ class _MainScreenState extends State<MainScreen> {
       _buildAuthProtectedPage(
         _userRole == 'Donor' || _userRole == 'Admin'
             ? const AdminTasksPage()
-            : const Center(child: Text('User Reservations Page (Placeholder)')),
+            : const UserReservationsPage(),
       ),
 
       _buildAuthProtectedPage(AddEquipmentPage(userRole: role)),
