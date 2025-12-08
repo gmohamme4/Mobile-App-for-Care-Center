@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
 import 'login.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -98,11 +99,46 @@ class ProfilePage extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      await FirebaseAuth.instance.signOut();
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => LoginPage()),
+                      // Show a blocking progress indicator while signing out.
+                      showDialog<void>(
+                        context: context,
+                        barrierDismissible: false,
+                        builder:
+                            (context) => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
                       );
+
+                      try {
+                        // Add a timeout so a stalled network call won't hang the UI.
+                        await FirebaseAuth.instance.signOut().timeout(
+                          const Duration(seconds: 10),
+                        );
+                        // Sign-out succeeded; close the progress dialog and navigate.
+                        Navigator.of(context, rootNavigator: true).pop();
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => LoginPage()),
+                        );
+                      } on TimeoutException catch (_) {
+                        Navigator.of(context, rootNavigator: true).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Sign out timed out. Check your network and try again.',
+                            ),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                      } catch (e) {
+                        Navigator.of(context, rootNavigator: true).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error signing out: $e'),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.redAccent,

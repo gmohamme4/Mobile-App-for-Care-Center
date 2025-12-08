@@ -763,13 +763,44 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
       width: double.infinity,
       height: 56,
       child: ElevatedButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Donation request submitted!"),
-              backgroundColor: Colors.green,
-            ),
-          );
+        onPressed: () async {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Please sign in to submit a donation.'),
+                backgroundColor: Colors.redAccent,
+              ),
+            );
+            return;
+          }
+
+          final data = <String, dynamic>{
+            'equipmentId': widget.equipmentId,
+            'itemName': _equipmentLocal['name'] ?? 'Donation Item',
+            'donorId': user.uid,
+            'status': 'Pending',
+            'timestamp': FieldValue.serverTimestamp(),
+          };
+
+          try {
+            await FirebaseFirestore.instance.collection('donations').add(data);
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Donation request submitted!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          } catch (e) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error submitting donation: $e'),
+                backgroundColor: Colors.redAccent,
+              ),
+            );
+          }
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF6B8D45),

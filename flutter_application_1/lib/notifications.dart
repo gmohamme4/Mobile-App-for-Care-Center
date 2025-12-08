@@ -59,18 +59,14 @@ class NotificationsPage extends StatelessWidget {
 
   Widget _buildUserView(BuildContext context, String uid) {
     // Donations where this user is donor
+    // Load donations and rent requests streams without assuming exact field names.
+    // We'll filter client-side so the UI is resilient to slightly different schemas
+    // (e.g. 'donorId' vs 'donorID' or 'userId'). For larger datasets, replace
+    // with indexed server-side queries matching your schema.
     final donationsStream =
-        FirebaseFirestore.instance
-            .collection('donations')
-            .where('donorId', isEqualTo: uid)
-            .snapshots();
-
-    // Rent requests where this user is renter
+        FirebaseFirestore.instance.collection('donations').snapshots();
     final rentRequestsStream =
-        FirebaseFirestore.instance
-            .collection('rent_requests')
-            .where('renterId', isEqualTo: uid)
-            .snapshots();
+        FirebaseFirestore.instance.collection('rent_requests').snapshots();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Notifications')),
@@ -83,6 +79,39 @@ class NotificationsPage extends StatelessWidget {
               'Donations',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
+
+            // Debug view: raw donations documents (helpful if a user's pending donation is not appearing)
+            StreamBuilder<QuerySnapshot>(
+              stream: donationsStream,
+              builder: (context, snap) {
+                if (!snap.hasData) return const SizedBox.shrink();
+                final docs = snap.data!.docs;
+                if (docs.isEmpty) return const SizedBox.shrink();
+                return ExpansionTile(
+                  title: Text('Debug: ${docs.length} donations'),
+                  children:
+                      docs.map((d) {
+                        final data = d.data() as Map<String, dynamic>;
+                        final matches =
+                            (data['donorId'] == uid) ||
+                            (data['donorID'] == uid) ||
+                            (data['userId'] == uid) ||
+                            (data['ownerId'] == uid);
+                        return ListTile(
+                          title: Text(d.id),
+                          subtitle: Text(data.toString()),
+                          trailing:
+                              matches
+                                  ? const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                  )
+                                  : null,
+                        );
+                      }).toList(),
+                );
+              },
+            ),
             const SizedBox(height: 8),
             StreamBuilder<QuerySnapshot>(
               stream: donationsStream,
@@ -90,17 +119,52 @@ class NotificationsPage extends StatelessWidget {
                 if (snap.connectionState == ConnectionState.waiting)
                   return const CircularProgressIndicator();
                 final docs = snap.data?.docs ?? [];
-                if (docs.isEmpty) return const Text('No donations found.');
+
+                // Find documents that belong to this user by checking several likely id fields.
+                final matching =
+                    docs.where((d) {
+                      final data = d.data() as Map<String, dynamic>;
+                      final possibleFields = [
+                        'donorId',
+                        'donorID',
+                        'userId',
+                        'ownerId',
+                      ];
+                      for (final f in possibleFields) {
+                        if (data.containsKey(f) && data[f] == uid) return true;
+                      }
+                      return false;
+                    }).toList();
+
+                if (matching.isEmpty) {
+                  // If there are donations but none match, show a hint so the user can debug.
+                  if (docs.isNotEmpty) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('No donations found for your account.'),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Tip: confirm your user id is saved on the donation document (donorId).',
+                        ),
+                      ],
+                    );
+                  }
+                  return const Text('No donations found.');
+                }
+
                 return Column(
                   children:
-                      docs.map((d) {
+                      matching.map((d) {
                         final data = d.data() as Map<String, dynamic>;
-                        final status = data['status'] ?? 'unknown';
+                        final rawStatus =
+                            (data['status'] ?? 'unknown').toString();
+                        final status = rawStatus.toLowerCase();
                         final title =
                             data['itemName'] ?? data['title'] ?? 'Donation';
                         return ListTile(
                           title: Text('$title'),
-                          subtitle: Text('Status: $status'),
+                          subtitle: Text('Status: ${rawStatus}'),
                           trailing:
                               status == 'accepted'
                                   ? const Icon(
@@ -126,18 +190,48 @@ class NotificationsPage extends StatelessWidget {
                 if (snap.connectionState == ConnectionState.waiting)
                   return const CircularProgressIndicator();
                 final docs = snap.data?.docs ?? [];
-                if (docs.isEmpty)
+
+                // Filter to requests belonging to this user (cover common id field names)
+                final matching =
+                    docs.where((d) {
+                      final data = d.data() as Map<String, dynamic>;
+                      final possibleFields = ['renterId', 'renterID', 'userId'];
+                      for (final f in possibleFields) {
+                        if (data.containsKey(f) && data[f] == uid) return true;
+                      }
+                      return false;
+                    }).toList();
+
+                if (matching.isEmpty) {
+                  if (docs.isNotEmpty) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'No renting requests found for your account.',
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Tip: confirm your user id is saved on the request document (renterId).',
+                        ),
+                      ],
+                    );
+                  }
                   return const Text('No renting requests found.');
+                }
+
                 return Column(
                   children:
-                      docs.map((d) {
+                      matching.map((d) {
                         final data = d.data() as Map<String, dynamic>;
-                        final status = data['status'] ?? 'pending';
+                        final rawStatus =
+                            (data['status'] ?? 'pending').toString();
+                        final status = rawStatus.toLowerCase();
                         final title =
                             data['itemName'] ?? data['title'] ?? 'Request';
                         return ListTile(
                           title: Text('$title'),
-                          subtitle: Text('Status: $status'),
+                          subtitle: Text('Status: ${rawStatus}'),
                           trailing:
                               status == 'accepted'
                                   ? const Icon(

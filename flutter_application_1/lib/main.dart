@@ -8,6 +8,7 @@ import 'login.dart';
 import 'AddEquipment.dart';
 import 'profile.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:async';
 import 'notifications.dart';
 import 'adminTasks.dart';
 
@@ -114,43 +115,76 @@ class _MainScreenState extends State<MainScreen> {
 
       _buildAuthProtectedPage(AddEquipmentPage(userRole: role)),
 
+      // Notifications tab (available to all authenticated users)
+      _buildAuthProtectedPage(const NotificationsPage()),
+
       _buildAuthProtectedPage(const ProfilePage()),
     ];
   }
 
   void _checkUserRole() {
     FirebaseAuth.instance.authStateChanges().listen((User? user) async {
-      if (user != null) {
-        try {
-          DocumentSnapshot doc =
-              await FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(user.uid) // user is non-null here due to if check above
-                  .get();
-          if (doc.exists) {
-            setState(() {
-              _userRole = doc.get('role');
-              _isLoadingRole = false;
-              _pages = _buildPages();
-            });
-          } else {
-            setState(() {
-              _userRole = 'Renter';
-              _isLoadingRole = false;
-              _pages = _buildPages();
-            });
-          }
-        } catch (e) {
-          print("Error fetching user role: $e");
+      if (user == null) {
+        if (!mounted) return;
+        setState(() {
+          _userRole = null;
+          _isLoadingRole = false;
+          _pages = _buildPages();
+        });
+        return;
+      }
+
+      final uid = user.uid ?? '';
+      if (uid.trim().isEmpty) {
+        if (!mounted) return;
+        setState(() {
+          _userRole = 'Renter';
+          _isLoadingRole = false;
+          _pages = _buildPages();
+        });
+        return;
+      }
+
+      try {
+        // Add a timeout so a stalled network/read doesn't hang the app.
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .get()
+            .timeout(const Duration(seconds: 10));
+
+        if (!mounted) return;
+
+        if (doc.exists) {
+          final roleValue =
+              (doc.data() is Map) ? (doc.get('role') as String?) : null;
+          setState(() {
+            _userRole = roleValue ?? 'Renter';
+            _isLoadingRole = false;
+            _pages = _buildPages();
+          });
+        } else {
           setState(() {
             _userRole = 'Renter';
             _isLoadingRole = false;
             _pages = _buildPages();
           });
         }
-      } else {
+      } on TimeoutException catch (te) {
+        // Timeout - fall back to safe defaults and log
+        print('Timeout fetching user role: $te');
+        if (!mounted) return;
         setState(() {
-          _userRole = null;
+          _userRole = 'Renter';
+          _isLoadingRole = false;
+          _pages = _buildPages();
+        });
+      } catch (e, st) {
+        print('Error fetching user role: $e');
+        print(st);
+        if (!mounted) return;
+        setState(() {
+          _userRole = 'Renter';
           _isLoadingRole = false;
           _pages = _buildPages();
         });
@@ -179,16 +213,7 @@ class _MainScreenState extends State<MainScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Care Center'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () => Navigator.pushNamed(context, '/notifications'),
-            tooltip: 'Notifications',
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Care Center')),
       body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
@@ -214,7 +239,11 @@ class _MainScreenState extends State<MainScreen> {
             ),
             label: "",
           ),
-          _navItem(Icons.person, 3),
+
+          // Notifications tab
+          _navItem(Icons.notifications, 3),
+
+          _navItem(Icons.person, 4),
         ],
       ),
     );
