@@ -8,6 +8,7 @@ import 'login.dart';
 import 'AddEquipment.dart';
 import 'profile.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'notifications.dart';
 import 'adminTasks.dart';
 
 void main() async {
@@ -44,6 +45,13 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/',
       routes: {'/': (context) => MainScreen()},
+      // Notifications route
+      onGenerateRoute: (settings) {
+        if (settings.name == '/notifications') {
+          return MaterialPageRoute(builder: (_) => const NotificationsPage());
+        }
+        return null;
+      },
     );
   }
 }
@@ -171,6 +179,16 @@ class _MainScreenState extends State<MainScreen> {
     }
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Care Center'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () => Navigator.pushNamed(context, '/notifications'),
+            tooltip: 'Notifications',
+          ),
+        ],
+      ),
       body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
