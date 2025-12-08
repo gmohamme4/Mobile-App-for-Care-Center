@@ -134,8 +134,8 @@ class _MainScreenState extends State<MainScreen> {
         return;
       }
 
-      final uid = user.uid ?? '';
-      if (uid.trim().isEmpty) {
+      final uid = user.uid;
+      if (uid.isEmpty) {
         if (!mounted) return;
         setState(() {
           _userRole = 'Renter';

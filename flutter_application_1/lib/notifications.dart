@@ -253,6 +253,12 @@ class NotificationsPage extends StatelessWidget {
   Widget _buildAdminView(BuildContext context) {
     final donationsStream =
         FirebaseFirestore.instance.collection('donations').snapshots();
+    final adminDonationsStream =
+        FirebaseFirestore.instance
+            .collection('donations')
+            .orderBy('timestamp', descending: true)
+            .limit(20)
+            .snapshots();
     final rentRequestsStream =
         FirebaseFirestore.instance.collection('rent_requests').snapshots();
 
@@ -270,10 +276,86 @@ class NotificationsPage extends StatelessWidget {
             StreamBuilder<QuerySnapshot>(
               stream: donationsStream,
               builder: (context, dSnap) {
-                final count = dSnap.hasData ? dSnap.data!.docs.length : 0;
+                final docs = dSnap.hasData ? dSnap.data!.docs : [];
+                final total = docs.length;
+                final pending =
+                    docs.where((d) {
+                      final data = d.data() as Map<String, dynamic>;
+                      final s = (data['status'] ?? '').toString().toLowerCase();
+                      return s == 'pending' || s == 'pending' || s.isEmpty;
+                    }).length;
+                final accepted =
+                    docs.where((d) {
+                      final data = d.data() as Map<String, dynamic>;
+                      final s = (data['status'] ?? '').toString().toLowerCase();
+                      return s == 'accepted' || s == 'accepted';
+                    }).length;
+
                 return ListTile(
                   title: const Text('Donations'),
-                  subtitle: Text('Total donations: $count'),
+                  subtitle: Text(
+                    'Total: $total • Pending: $pending • Accepted: $accepted',
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 8),
+            const Text(
+              'Recent Donations',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            StreamBuilder<QuerySnapshot>(
+              stream: adminDonationsStream,
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting)
+                  return const CircularProgressIndicator();
+                final docs = snap.data?.docs ?? [];
+                if (docs.isEmpty) return const Text('No donations yet.');
+                return Column(
+                  children:
+                      docs.map((d) {
+                        final data = d.data() as Map<String, dynamic>;
+                        final title =
+                            data['itemName'] ?? data['title'] ?? 'Donation';
+                        final donorName =
+                            (data['donorName'] ?? data['donor'] ?? '')
+                                as String;
+                        final donorEmail = (data['donorEmail'] ?? '') as String;
+                        final donorId =
+                            (data['donorId'] ??
+                                    data['donorID'] ??
+                                    data['userId'] ??
+                                    '')
+                                as String;
+                        final rawStatus =
+                            (data['status'] ?? 'unknown').toString();
+                        final timestamp = data['timestamp'];
+                        String when = '';
+                        try {
+                          if (timestamp is Timestamp) {
+                            when =
+                                DateTime.fromMillisecondsSinceEpoch(
+                                  timestamp.millisecondsSinceEpoch,
+                                ).toLocal().toString();
+                          } else if (timestamp is Map &&
+                              timestamp['_seconds'] != null) {
+                            when =
+                                DateTime.fromMillisecondsSinceEpoch(
+                                  (timestamp['_seconds'] as int) * 1000,
+                                ).toLocal().toString();
+                          }
+                        } catch (_) {}
+
+                        return ListTile(
+                          title: Text('$title'),
+                          subtitle: Text(
+                            'Status: $rawStatus\nDonor: ${donorName.isNotEmpty ? donorName : donorId}${donorEmail.isNotEmpty ? ' • $donorEmail' : ''}\n$when',
+                          ),
+                          isThreeLine: true,
+                        );
+                      }).toList(),
                 );
               },
             ),

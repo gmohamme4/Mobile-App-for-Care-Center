@@ -779,6 +779,8 @@ class _EquipmentDetailPageState extends State<EquipmentDetailPage> {
             'equipmentId': widget.equipmentId,
             'itemName': _equipmentLocal['name'] ?? 'Donation Item',
             'donorId': user.uid,
+            'donorName': user.displayName ?? '',
+            'donorEmail': user.email ?? '',
             'status': 'Pending',
             'timestamp': FieldValue.serverTimestamp(),
           };
