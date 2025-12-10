@@ -11,12 +11,18 @@ class AddEquipmentPage extends StatefulWidget {
 }
 
 class _AddEquipmentPageState extends State<AddEquipmentPage> {
+  // ==========================================================
+  // 1. تحديد الدور لتطبيق المنطق المشروط
+  // ==========================================================
+  bool get isAdmin => widget.userRole == 'Admin';
+
   final TextEditingController nameController = TextEditingController();
   final TextEditingController descController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
   final TextEditingController locationController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
 
+  // الحالة الافتراضية للتوفر ونوع المعدة
   String selectedAvailability = 'available';
   final List<String> availabilityStatuses = [
     "available",
@@ -24,59 +30,97 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
     "under maintenance",
   ];
 
-  String? selectedType;
+  String? selectedType; // يُستخدم فقط إذا كان isAdmin
   int selectedCondition = 5;
   final List<String> types = ["Rental", "Exchange", "Donation"];
 
+  @override
+  void initState() {
+    super.initState();
+    // إذا لم يكن مسؤولاً، يكون نوع المعدة مثبتاً على 'تبرع'
+    if (!isAdmin) {
+      selectedType = 'Donation';
+    }
+  }
+
   void saveItem() async {
-    if (nameController.text.isEmpty ||
-        descController.text.isEmpty ||
-        selectedType == null) {
+    // التحقق الأساسي للحقول المشتركة
+    if (nameController.text.isEmpty || descController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text("❗Please fill in all required fields"),
           backgroundColor: Colors.redAccent,
         ),
       );
       return;
     }
-    double rentalPrice = double.tryParse(priceController.text) ?? 0.0;
+    
+    // التحقق من نوع المعدة فقط إذا كان مسؤولاً
+    if (isAdmin && selectedType == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("❗Please select the Equipment Type"),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    double rentalPrice = isAdmin ? (double.tryParse(priceController.text) ?? 0.0) : 0.0;
     int quantity = int.tryParse(quantityController.text) ?? 1;
 
     try {
       Map<String, dynamic> data = {
         'name': nameController.text.trim(),
         'description': descController.text.trim(),
-        'type': selectedType,
         'ownerId': FirebaseAuth.instance.currentUser!.uid,
         'timestamp': FieldValue.serverTimestamp(),
         'condition': selectedCondition,
         'quantity': quantity,
         'location': locationController.text.trim(),
-        'rentalPricePerDay': rentalPrice,
-        'availabilityStatus': selectedAvailability,
         'tags': [],
-        'isApproved': false, // All items require admin approval
+        // جميع العناصر تتطلب موافقة المسؤول مبدئياً
+        'isApproved': false, 
       };
+
+      // ==========================================================
+      // 2. تطبيق منطق حفظ البيانات بناءً على الدور
+      // ==========================================================
+      if (isAdmin) {
+        // إذا كان مسؤولاً: استخدم القيم المختارة في الواجهة
+        data['type'] = selectedType;
+        data['availabilityStatus'] = selectedAvailability;
+        data['rentalPricePerDay'] = rentalPrice;
+      } else {
+        // إذا كان مستخدماً/متبرعاً: ثبت القيم للتبرع
+        data['type'] = 'Donation';
+        data['availabilityStatus'] = 'available'; // تبرع جديد يكون متاحاً مبدئياً
+        // لا يتم إضافة 'rentalPricePerDay' لتبسيط بيانات التبرع
+      }
 
       await FirebaseFirestore.instance.collection('equipment').add(data);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("✔ Equipment added successfully!"),
+          content: Text(
+              "✔ Equipment added successfully! Waiting for admin approval."),
           backgroundColor: Colors.green,
         ),
       );
 
+      // مسح الحقول بعد الحفظ
       nameController.clear();
       descController.clear();
       quantityController.clear();
       locationController.clear();
       priceController.clear();
       setState(() {
-        selectedType = null;
         selectedCondition = 5;
-        selectedAvailability = 'available';
+        // لا يتم مسح selectedType لغير المسؤول لأنه ثابت على 'Donation'
+        if (isAdmin) {
+          selectedType = null;
+          selectedAvailability = 'available';
+        }
       });
     } catch (e) {
       print("Error adding equipment: $e");
@@ -92,22 +136,22 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF6F6F6),
+      backgroundColor: const Color(0xFFF6F6F6),
       appBar: AppBar(
-        title: Text("Add Equipment"),
-        backgroundColor: Color(0xFFBFE699),
+        title: Text(isAdmin ? "Add Equipment (Admin)" : "Donate Equipment"),
+        backgroundColor: const Color(0xFFBFE699),
         elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
         child: Column(
           children: [
             Container(
-              padding: EdgeInsets.all(20),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [
+                boxShadow: const [
                   BoxShadow(
                     color: Colors.black12,
                     blurRadius: 15,
@@ -119,16 +163,18 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                 children: [
                   TextField(
                     controller: nameController,
-                    decoration: InputDecoration(labelText: "Equipment Name"),
+                    decoration:
+                        const InputDecoration(labelText: "Equipment Name *"),
                   ),
-                  SizedBox(height: 15),
+                  const SizedBox(height: 15),
 
                   TextField(
                     controller: descController,
                     maxLines: 3,
-                    decoration: InputDecoration(labelText: "Description"),
+                    decoration:
+                        const InputDecoration(labelText: "Description *"),
                   ),
-                  SizedBox(height: 15),
+                  const SizedBox(height: 15),
                   TextFormField(
                     controller: quantityController,
                     keyboardType: TextInputType.number,
@@ -137,79 +183,92 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                       border: OutlineInputBorder(),
                     ),
                   ),
-                  SizedBox(height: 15),
+                  const SizedBox(height: 15),
 
                   TextFormField(
                     controller: locationController,
                     keyboardType: TextInputType.text,
                     decoration: const InputDecoration(
-                      labelText: "Location",
+                      labelText: "Location (Where is the item now?)",
                       border: OutlineInputBorder(),
                     ),
                   ),
-                  SizedBox(height: 15),
+                  const SizedBox(height: 15),
 
-                  TextFormField(
-                    controller: priceController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Rental Price Per Day (Optional)",
-                      border: OutlineInputBorder(),
+                  // ==========================================================
+                  // 3. عرض حقول المسؤول (السعر والتوفر والنوع)
+                  // ==========================================================
+
+                  // حقل سعر الإيجار: يظهر فقط للمسؤول
+                  if (isAdmin)
+                    TextFormField(
+                      controller: priceController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "Rental Price Per Day (Optional)",
+                        border: OutlineInputBorder(),
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 15),
+                  if (isAdmin) const SizedBox(height: 15),
 
-                  DropdownButtonFormField<String>(
-                    value: selectedAvailability,
-                    decoration: const InputDecoration(
-                      labelText: "Availability Status",
+                  // حالة التوفر: تظهر فقط للمسؤول
+                  if (isAdmin)
+                    DropdownButtonFormField<String>(
+                      value: selectedAvailability,
+                      decoration: const InputDecoration(
+                        labelText: "Availability Status",
+                      ),
+                      items: availabilityStatuses.map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          selectedAvailability = newValue!;
+                        });
+                      },
                     ),
-                    items:
-                        availabilityStatuses.map((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
-                          );
-                        }).toList(),
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        selectedAvailability = newValue!;
-                      });
-                    },
-                  ),
-                  SizedBox(height: 15),
+                  if (isAdmin) const SizedBox(height: 15),
 
-                  DropdownButtonFormField(
-                    value: selectedType,
-                    items:
-                        types.map((type) {
-                          return DropdownMenuItem(
-                            value: type,
-                            child: Text(type),
-                          );
-                        }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedType = value;
-                      });
-                    },
-                    decoration: InputDecoration(labelText: "Select Type"),
-                  ),
-                  SizedBox(height: 15),
+                  // نوع المعدة (تأجير/تبرع/تبادل): يظهر فقط للمسؤول
+                  if (isAdmin)
+                    DropdownButtonFormField<String?>(
+                      value: selectedType,
+                      items: types.map((type) {
+                        return DropdownMenuItem(
+                          value: type,
+                          child: Text(type),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedType = value;
+                        });
+                      },
+                      decoration:
+                          const InputDecoration(labelText: "Select Type *"),
+                    ),
+                  if (isAdmin) const SizedBox(height: 15),
 
+                  // حالة المعدة (1-5): تظهر للجميع
                   Row(
                     children: [
-                      Text("Condition (1-5):", style: TextStyle(fontSize: 16)),
-                      SizedBox(width: 20),
+                      Text("Condition (1-5):",
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight:
+                                  isAdmin ? FontWeight.normal : FontWeight.bold)),
+                      const SizedBox(width: 20),
                       DropdownButton<int>(
                         value: selectedCondition,
-                        items:
-                            [1, 2, 3, 4, 5].map((value) {
-                              return DropdownMenuItem(
-                                value: value,
-                                child: Text(value.toString()),
-                              );
-                            }).toList(),
+                        items: [1, 2, 3, 4, 5].map((value) {
+                          return DropdownMenuItem(
+                            value: value,
+                            child: Text(value.toString()),
+                          );
+                        }).toList(),
                         onChanged: (value) {
                           setState(() {
                             selectedCondition = value!;
@@ -219,14 +278,14 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                     ],
                   ),
 
-                  SizedBox(height: 25),
+                  const SizedBox(height: 25),
 
                   SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
                       onPressed: saveItem,
-                      child: Text("Add Equipment"),
+                      child: Text(isAdmin ? "Add Equipment" : "Submit Donation"),
                     ),
                   ),
                 ],

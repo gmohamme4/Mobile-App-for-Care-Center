@@ -14,11 +14,13 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
+  bool _isLoading = false;
 
   void login() async {
+    // التحقق من الحقول
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text("❗Please enter email and password"),
           backgroundColor: Colors.redAccent,
         ),
@@ -26,14 +28,18 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    setState(() => _isLoading = true);
+
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text("✔ Login Successful"),
           backgroundColor: Colors.green,
         ),
@@ -44,29 +50,40 @@ class _LoginPageState extends State<LoginPage> {
         MaterialPageRoute(builder: (context) => const MainScreen()),
       );
     } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      
+      String errorMessage = "Login failed";
+      
       if (e.code == 'user-not-found') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("The user is not registered. Please register first."),
-            action: SnackBarAction(
-              label: 'Sign Up',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => SignupPage()),
-                );
-              },
-            ),
-          ),
-        );
+        errorMessage = "No user found with this email";
       } else if (e.code == 'wrong-password') {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("The password is incorrect.")));
+        errorMessage = "Incorrect password";
+      } else if (e.code == 'invalid-email') {
+        errorMessage = "Invalid email format";
+      } else if (e.code == 'user-disabled') {
+        errorMessage = "This account has been disabled";
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("An error occurred:${e.message}")),
-        );
+        errorMessage = "Error: ${e.message}";
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.redAccent,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Network error: ${e.toString()}"),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -74,20 +91,20 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF5F5F5),
+      backgroundColor: const Color(0xFFF5F5F5),
       body: SingleChildScrollView(
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 25, vertical: 50),
+          padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 50),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Logo / Icon
               Container(
-                padding: EdgeInsets.all(20),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
                       color: Colors.black12,
                       blurRadius: 10,
@@ -95,17 +112,17 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ],
                 ),
-                child: Icon(Icons.login, size: 60, color: Colors.green),
+                child: const Icon(Icons.login, size: 60, color: Colors.green),
               ),
-              SizedBox(height: 30),
+              const SizedBox(height: 30),
 
               // Card for Form
               Container(
-                padding: EdgeInsets.all(20),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
                       color: Colors.black12,
                       blurRadius: 15,
@@ -115,21 +132,22 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 child: Column(
                   children: [
-                    Text(
+                    const Text(
                       "Login",
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 25),
+                    const SizedBox(height: 25),
 
                     // Email
                     TextField(
                       controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
                         labelText: "Email",
-                        prefixIcon: Icon(Icons.email),
+                        prefixIcon: const Icon(Icons.email),
                         filled: true,
                         fillColor: Colors.grey[100],
                         border: OutlineInputBorder(
@@ -138,7 +156,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                     ),
-                    SizedBox(height: 15),
+                    const SizedBox(height: 15),
 
                     // Password
                     TextField(
@@ -146,7 +164,7 @@ class _LoginPageState extends State<LoginPage> {
                       obscureText: true,
                       decoration: InputDecoration(
                         labelText: "Password",
-                        prefixIcon: Icon(Icons.lock),
+                        prefixIcon: const Icon(Icons.lock),
                         filled: true,
                         fillColor: Colors.grey[100],
                         border: OutlineInputBorder(
@@ -155,55 +173,60 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                     ),
-                    SizedBox(height: 25),
+                    const SizedBox(height: 25),
 
                     // Login Button with Gradient
-                    Container(
+                    SizedBox(
                       width: double.infinity,
                       height: 50,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(15),
-                        gradient: LinearGradient(
-                          colors: [Colors.green, Colors.lightGreen],
-                        ),
-                      ),
                       child: ElevatedButton(
-                        onPressed: login,
+                        onPressed: _isLoading ? null : login,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
+                          backgroundColor: const Color(0xFF6B8D45),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(15),
                           ),
+                          disabledBackgroundColor: Colors.grey,
                         ),
-                        child: Text(
-                          "Login",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Text(
+                                "Login",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
                       ),
                     ),
 
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
                     // Signup link
                     GestureDetector(
-                      onTap: () {
-                        if (widget.onSignupTap != null) {
-                          widget.onSignupTap!();
-                        } else {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => SignupPage()),
-                          );
-                        }
-                      },
+                      onTap: _isLoading
+                          ? null
+                          : () {
+                              if (widget.onSignupTap != null) {
+                                widget.onSignupTap!();
+                              } else {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const SignupPage()),
+                                );
+                              }
+                            },
                       child: Text(
                         "Don't have an account? Sign Up",
                         style: TextStyle(
-                          color: Colors.green,
+                          color: _isLoading ? Colors.grey : Colors.green,
                           decoration: TextDecoration.underline,
                         ),
                       ),

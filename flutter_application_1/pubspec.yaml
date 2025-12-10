@@ -15,6 +15,8 @@ dependencies:
   firebase_storage: ^13.0.4
   image_picker: ^1.0.7
   smooth_page_indicator: ^1.1.0
+  intl: ^0.18.0
+  cupertino_icons: ^1.0.6
 
 dev_dependencies:
   flutter_test:

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'signup.dart';
 import 'home.dart';
 import 'login.dart';
@@ -47,7 +47,6 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/',
       routes: {'/': (context) => MainScreen()},
-      // Notifications route
       onGenerateRoute: (settings) {
         if (settings.name == '/notifications') {
           return MaterialPageRoute(builder: (_) => const NotificationsPage());
@@ -69,6 +68,8 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   String? _userRole;
   bool _isLoadingRole = true;
+  int _unreadNotificationsCount = 0;
+  StreamSubscription? _notificationsSubscription;
 
   late List<Widget> _pages;
 
@@ -77,6 +78,45 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     _checkUserRole();
     _pages = _buildPages();
+    _startNotificationsListener();
+  }
+
+  @override
+  void dispose() {
+    _notificationsSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _startNotificationsListener() {
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (user != null) {
+        _subscribeToNotifications(user.uid);
+      } else {
+        setState(() {
+          _unreadNotificationsCount = 0;
+        });
+      }
+    });
+  }
+
+  void _subscribeToNotifications(String userId) {
+    _notificationsSubscription?.cancel();
+    
+    _notificationsSubscription = FirebaseFirestore.instance
+        .collection('notifications')
+        .where('toUserId', isEqualTo: userId)
+        .where('status', isEqualTo: 'unread')
+        .snapshots()
+        .listen((QuerySnapshot snapshot) {
+      if (mounted) {
+        setState(() {
+          _unreadNotificationsCount = snapshot.docs.length;
+        });
+        print("📊 Unread notifications: $_unreadNotificationsCount");
+      }
+    }, onError: (error) {
+      print("❌ Error listening to notifications: $error");
+    });
   }
 
   Widget _buildAuthProtectedPage(Widget loggedInPage) {
@@ -107,18 +147,13 @@ class _MainScreenState extends State<MainScreen> {
     final String? role = _userRole;
     return [
       const HomePage(),
-
       _buildAuthProtectedPage(
         _userRole == 'Donor' || _userRole == 'Admin'
             ? const AdminTasksPage()
             : const UserReservationsPage(),
       ),
-
       _buildAuthProtectedPage(AddEquipmentPage(userRole: role)),
-
-      // Notifications tab (available to all authenticated users)
       _buildAuthProtectedPage(const NotificationsPage()),
-
       _buildAuthProtectedPage(const ProfilePage()),
     ];
   }
@@ -147,7 +182,6 @@ class _MainScreenState extends State<MainScreen> {
       }
 
       try {
-        // Add a timeout so a stalled network/read doesn't hang the app.
         final doc = await FirebaseFirestore.instance
             .collection('users')
             .doc(uid)
@@ -172,7 +206,6 @@ class _MainScreenState extends State<MainScreen> {
           });
         }
       } on TimeoutException catch (te) {
-        // Timeout - fall back to safe defaults and log
         print('Timeout fetching user role: $te');
         if (!mounted) return;
         setState(() {
@@ -194,15 +227,83 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _onItemTapped(int index) {
+    // إذا نقر على تبويب الإشعارات، امسح العداد
+    if (index == 3 && _unreadNotificationsCount > 0) {
+      _markAllNotificationsAsRead();
+    }
     setState(() => _selectedIndex = index);
   }
 
-  BottomNavigationBarItem _navItem(IconData icon, int index) {
+  Future<void> _markAllNotificationsAsRead() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('notifications')
+          .where('toUserId', isEqualTo: user.uid)
+          .where('status', isEqualTo: 'unread')
+          .get();
+
+      final batch = FirebaseFirestore.instance.batch();
+      
+      for (var doc in snapshot.docs) {
+        batch.update(doc.reference, {
+          'status': 'read',
+          'readAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      if (snapshot.docs.isNotEmpty) {
+        await batch.commit();
+        print("✅ Marked ${snapshot.docs.length} notifications as read");
+      }
+    } catch (e) {
+      print("❌ Error marking notifications as read: $e");
+    }
+  }
+
+  BottomNavigationBarItem _navItem(IconData icon, int index, {bool isNotification = false}) {
     return BottomNavigationBarItem(
-      icon: Icon(
-        icon,
-        color: _selectedIndex == index ? const Color(0xFF6B8D45) : Colors.grey,
-      ),
+      icon: isNotification && _unreadNotificationsCount > 0
+          ? Stack(
+              children: [
+                Icon(
+                  icon,
+                  color: _selectedIndex == index ? const Color(0xFF6B8D45) : Colors.grey,
+                ),
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
+                    child: Text(
+                      _unreadNotificationsCount > 9 
+                        ? '9+' 
+                        : _unreadNotificationsCount.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : Icon(
+              icon,
+              color: _selectedIndex == index ? const Color(0xFF6B8D45) : Colors.grey,
+            ),
       label: "",
     );
   }
@@ -210,12 +311,43 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoadingRole) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Care Center')),
-      body: IndexedStack(index: _selectedIndex, children: _pages),
+      appBar: AppBar(
+        title: const Text('Care Center'),
+        actions: [
+          if (_unreadNotificationsCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '$_unreadNotificationsCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _pages,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
@@ -240,10 +372,7 @@ class _MainScreenState extends State<MainScreen> {
             ),
             label: "",
           ),
-
-          // Notifications tab
-          _navItem(Icons.notifications, 3),
-
+          _navItem(Icons.notifications, 3, isNotification: true),
           _navItem(Icons.person, 4),
         ],
       ),
