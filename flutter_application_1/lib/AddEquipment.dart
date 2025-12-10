@@ -11,9 +11,7 @@ class AddEquipmentPage extends StatefulWidget {
 }
 
 class _AddEquipmentPageState extends State<AddEquipmentPage> {
-  // ==========================================================
-  // 1. تحديد الدور لتطبيق المنطق المشروط
-  // ==========================================================
+
   bool get isAdmin => widget.userRole == 'Admin';
 
   final TextEditingController nameController = TextEditingController();
@@ -22,7 +20,6 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
   final TextEditingController locationController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
 
-  // الحالة الافتراضية للتوفر ونوع المعدة
   String selectedAvailability = 'available';
   final List<String> availabilityStatuses = [
     "available",
@@ -30,21 +27,19 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
     "under maintenance",
   ];
 
-  String? selectedType; // يُستخدم فقط إذا كان isAdmin
+  String? selectedType;
   int selectedCondition = 5;
   final List<String> types = ["Rental", "Exchange", "Donation"];
 
   @override
   void initState() {
     super.initState();
-    // إذا لم يكن مسؤولاً، يكون نوع المعدة مثبتاً على 'تبرع'
     if (!isAdmin) {
       selectedType = 'Donation';
     }
   }
 
   void saveItem() async {
-    // التحقق الأساسي للحقول المشتركة
     if (nameController.text.isEmpty || descController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -55,7 +50,6 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
       return;
     }
     
-    // التحقق من نوع المعدة فقط إذا كان مسؤولاً
     if (isAdmin && selectedType == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -79,24 +73,17 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
         'quantity': quantity,
         'location': locationController.text.trim(),
         'tags': [],
-        // جميع العناصر تتطلب موافقة المسؤول مبدئياً
         'isApproved': false, 
       };
 
-      // ==========================================================
-      // 2. تطبيق منطق حفظ البيانات بناءً على الدور
-      // ==========================================================
       if (isAdmin) {
-        // إذا كان مسؤولاً: استخدم القيم المختارة في الواجهة
         data['type'] = selectedType;
         data['availabilityStatus'] = selectedAvailability;
         data['rentalPricePerDay'] = rentalPrice;
       } else {
-        // إذا كان مستخدماً/متبرعاً: ثبت القيم للتبرع
         data['type'] = 'Donation';
-        data['availabilityStatus'] = 'available'; // تبرع جديد يكون متاحاً مبدئياً
-        // لا يتم إضافة 'rentalPricePerDay' لتبسيط بيانات التبرع
-      }
+        data['availabilityStatus'] = 'available';
+        }
 
       await FirebaseFirestore.instance.collection('equipment').add(data);
 
@@ -108,7 +95,6 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
         ),
       );
 
-      // مسح الحقول بعد الحفظ
       nameController.clear();
       descController.clear();
       quantityController.clear();
@@ -116,7 +102,6 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
       priceController.clear();
       setState(() {
         selectedCondition = 5;
-        // لا يتم مسح selectedType لغير المسؤول لأنه ثابت على 'Donation'
         if (isAdmin) {
           selectedType = null;
           selectedAvailability = 'available';
@@ -195,11 +180,6 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                   ),
                   const SizedBox(height: 15),
 
-                  // ==========================================================
-                  // 3. عرض حقول المسؤول (السعر والتوفر والنوع)
-                  // ==========================================================
-
-                  // حقل سعر الإيجار: يظهر فقط للمسؤول
                   if (isAdmin)
                     TextFormField(
                       controller: priceController,
@@ -211,7 +191,6 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                     ),
                   if (isAdmin) const SizedBox(height: 15),
 
-                  // حالة التوفر: تظهر فقط للمسؤول
                   if (isAdmin)
                     DropdownButtonFormField<String>(
                       value: selectedAvailability,
@@ -232,7 +211,6 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                     ),
                   if (isAdmin) const SizedBox(height: 15),
 
-                  // نوع المعدة (تأجير/تبرع/تبادل): يظهر فقط للمسؤول
                   if (isAdmin)
                     DropdownButtonFormField<String?>(
                       value: selectedType,
@@ -252,7 +230,6 @@ class _AddEquipmentPageState extends State<AddEquipmentPage> {
                     ),
                   if (isAdmin) const SizedBox(height: 15),
 
-                  // حالة المعدة (1-5): تظهر للجميع
                   Row(
                     children: [
                       Text("Condition (1-5):",

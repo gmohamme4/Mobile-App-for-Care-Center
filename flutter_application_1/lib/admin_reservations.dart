@@ -11,7 +11,6 @@ class AdminReservationsPage extends StatelessWidget {
           .doc(reservationId)
           .update({'status': newStatus});
 
-      // ✅ إرسال إشعار للمستخدم عند تغيير حالة الحجز
       final reservationDoc = await FirebaseFirestore.instance
           .collection('reservations')
           .doc(reservationId)

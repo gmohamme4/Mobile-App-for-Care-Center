@@ -4,26 +4,23 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class MaintenanceListPage extends StatelessWidget {
   const MaintenanceListPage({super.key});
 
-  // دالة لتحديث حالة المعدة إلى "Available" وإضافة سجل صيانة
   void _markAsAvailable(
       String equipmentId, String itemName, BuildContext context) async {
     try {
-      // 1. تحديث حالة المعدة في مجموعة 'equipment'
       await FirebaseFirestore.instance
           .collection('equipment')
           .doc(equipmentId)
           .update({
         'availability': 'available',
-        'isApproved': true, // تأكيد الموافقة إذا كانت قد تمت مراجعتها مسبقًا
+        'isApproved': true,
       });
 
-      // 2. إضافة سجل إلى مجموعة 'maintenance_logs' للتوثيق
       await FirebaseFirestore.instance.collection('maintenance_logs').add({
         'equipmentId': equipmentId,
         'itemName': itemName,
         'status': 'Repaired',
         'dateResolved': FieldValue.serverTimestamp(),
-        'adminId': 'admin_user_id', // يجب استبدالها بمعرف المسؤول الحالي
+        'adminId': 'admin_user_id',
         'notes': 'Maintenance completed and item returned to inventory.',
       });
 
@@ -47,7 +44,6 @@ class MaintenanceListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // جلب المعدات التي حالتها "تحت الصيانة" فقط
     final maintenanceStream = FirebaseFirestore.instance
         .collection('equipment')
         .where('availability', isEqualTo: 'under maintenance')

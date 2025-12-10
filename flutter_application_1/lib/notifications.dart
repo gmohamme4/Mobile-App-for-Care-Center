@@ -75,14 +75,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
     );
   }
 
-  // دالة لإرسال إشعارات التأخير
 Future<void> checkAndSendOverdueNotifications() async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) return;
 
   final now = DateTime.now();
   
-  // جلب الحجوزات المنتهية
   final overdueReservations = await FirebaseFirestore.instance
       .collection('reservations')
       .where('renterId', isEqualTo: user.uid)
@@ -96,7 +94,6 @@ Future<void> checkAndSendOverdueNotifications() async {
     final endDate = (data['endDate'] as Timestamp).toDate();
     final overdueDays = now.difference(endDate).inDays;
 
-    // تحقق إذا تم إرسال إشعار اليوم
     final today = DateTime(now.year, now.month, now.day);
     final notificationExists = await FirebaseFirestore.instance
         .collection('notifications')
@@ -107,7 +104,6 @@ Future<void> checkAndSendOverdueNotifications() async {
         .get();
 
     if (notificationExists.docs.isEmpty && overdueDays > 0) {
-      // إرسال إشعار تأخير
       await FirebaseFirestore.instance.collection('notifications').add({
         'toUserId': user.uid,
         'title': '⚠️ OVERDUE RENTAL',
@@ -124,10 +120,7 @@ Future<void> checkAndSendOverdueNotifications() async {
 }
 
 
-  // ======================\
-  // Standard User View (Renter/Donor)
-  // ======================\
-  // في دالة _buildUserView:
+
 Widget _buildUserView(String uid) {
   print("👤 Building notifications for user: $uid");
 
@@ -161,7 +154,6 @@ Widget _buildUserView(String uid) {
       final docs = snapshot.data?.docs ?? [];
       print("📄 Number of notifications: ${docs.length}");
       
-      // طباعة تفاصيل كل إشعار
       for (var doc in docs) {
         final data = doc.data() as Map<String, dynamic>;
         print("📨 Notification: ${data['title']} - ${data['type']}");
@@ -204,12 +196,10 @@ Widget _buildUserView(String uid) {
             isRead: isRead,
             type: data['type'],
             onTap: () {
-              // تحديث حالة الإشعار كمقروء
               if (!isRead) {
                 _markAsRead(doc.id);
               }
               
-              // التنقل حسب نوع الإشعار
               _handleNotificationTap(data['type'], context);
             },
           );
@@ -232,7 +222,7 @@ Widget _buildNotificationCard({
   return Card(
     margin: const EdgeInsets.symmetric(vertical: 8),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    color: isRead ? Colors.white : const Color(0xFFE8F5E9), // لون مختلف للإشعارات الجديدة
+    color: isRead ? Colors.white : const Color(0xFFE8F5E9),
     child: InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: onTap,
@@ -241,7 +231,6 @@ Widget _buildNotificationCard({
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // أيقونة
             Container(
               width: 40,
               height: 40,
@@ -259,7 +248,6 @@ Widget _buildNotificationCard({
             ),
             const SizedBox(width: 16),
             
-            // المحتوى
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -319,7 +307,6 @@ Widget _buildNotificationCard({
   );
 }
 
-// دالة للحصول على لون حسب نوع الإشعار
 Color _getNotificationColor(String? type) {
   switch (type) {
     case 'donation_approved':
@@ -334,12 +321,10 @@ Color _getNotificationColor(String? type) {
 }
 
 
-// دالة جديدة للتعامل مع نقر الإشعار
 void _handleNotificationTap(String? type, BuildContext context) {
   switch (type) {
     case 'donation_approved':
     case 'donation_declined':
-      // الانتقال إلى صفحة الحجوزات أو التبرعات
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -357,14 +342,11 @@ void _handleNotificationTap(String? type, BuildContext context) {
       );
       break;
     default:
-      // لا تفعل شيئاً أو أظهر رسالة
       break;
   }
 }
 
-  // ======================\
-  // Admin View
-  // ======================\
+
   Widget _buildAdminView(String uid) {
   return ListView(
     padding: const EdgeInsets.all(12),
@@ -383,7 +365,7 @@ void _handleNotificationTap(String? type, BuildContext context) {
         'status',
         'Pending',
         Icons.calendar_today,
-        const AdminReservationsPage(), // ✅ صفحة الحجوزات
+        const AdminReservationsPage(),
       ),
       const SizedBox(height: 16),
 
@@ -394,7 +376,7 @@ void _handleNotificationTap(String? type, BuildContext context) {
         'isApproved',
         false,
         Icons.medical_services,
-        const AdminEquipmentReviewPage(), // ✅ صفحة مراجعة المعدات
+        const AdminEquipmentReviewPage(),
       ),
       const SizedBox(height: 16),
 
@@ -413,7 +395,7 @@ void _handleNotificationTap(String? type, BuildContext context) {
   String field,
   dynamic value,
   IconData icon,
-  Widget destinationPage, // ✅ إضافة بارامتر للصفحة الهدف
+  Widget destinationPage,
 ) {
   return StreamBuilder<QuerySnapshot>(
     stream: _firestore
@@ -456,7 +438,7 @@ void _handleNotificationTap(String? type, BuildContext context) {
             if (count > 0) {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => destinationPage), // ✅ التنقل للصفحة الصحيحة
+                MaterialPageRoute(builder: (context) => destinationPage),
               );
             }
           },
@@ -465,9 +447,7 @@ void _handleNotificationTap(String? type, BuildContext context) {
     },
   );
 }
-// نسخة مبسطة من _buildStatsSection()
 Widget _buildStatsSection() {
-  // استعلام واحد فقط للمعدات النشطة
   final equipmentStream = _firestore
       .collection('equipment')
       .where('isApproved', isEqualTo: true)
@@ -486,15 +466,14 @@ Widget _buildStatsSection() {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _statBox('Total Equipment', totalEquipment, const Color(0xFF6B8D45)),
-          _statBox('Active Users', 24, Colors.blue), // رقم ثابت كمثال
-          _statBox('Monthly Rentals', 15, Colors.orange), // رقم ثابت كمثال
+          _statBox('Active Users', 24, Colors.blue),
+          _statBox('Monthly Rentals', 15, Colors.orange),
         ],
       );
     },
   );
 }
 
-// دالة _statBox الأساسية
 Widget _statBox(String title, int value, Color color) {
   return Container(
     padding: const EdgeInsets.all(16),

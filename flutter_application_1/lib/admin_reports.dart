@@ -35,15 +35,11 @@ class AdminReportsPage extends StatelessWidget {
   }
 }
 
-// ====================================================
-// Widget للتقرير الأول: الإيجارات المتأخرة
-// ====================================================
 class _OverdueRentalsReport extends StatelessWidget {
   const _OverdueRentalsReport();
 
   @override
   Widget build(BuildContext context) {
-    // جلب الحجوزات التي انتهى تاريخ إرجاعها ولم يتم وضع علامة "Returned" أو "Cancelled" عليها
     final overdueStream = FirebaseFirestore.instance
         .collection('reservations')
         .where('status', isEqualTo: 'Checked Out')
@@ -109,15 +105,11 @@ class _OverdueRentalsReport extends StatelessWidget {
   }
 }
 
-// ====================================================
-// Widget للتقرير الثاني: سجلات الصيانة
-// ====================================================
 class _MaintenanceLogsReport extends StatelessWidget {
   const _MaintenanceLogsReport();
 
   @override
   Widget build(BuildContext context) {
-    // جلب جميع سجلات الصيانة
     final logsStream = FirebaseFirestore.instance
         .collection('maintenance_logs')
         .orderBy('dateResolved', descending: true)
