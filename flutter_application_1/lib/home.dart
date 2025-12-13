@@ -128,7 +128,7 @@ class _HomePageState extends State<HomePage> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Text(
-                            "Welcome to Pharmacy App,",
+                            "Welcome to Care Center App,",
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[700],
