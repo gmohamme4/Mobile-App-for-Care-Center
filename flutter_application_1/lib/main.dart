@@ -227,7 +227,6 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _onItemTapped(int index) {
-    // إذا نقر على تبويب الإشعارات، امسح العداد
     if (index == 3 && _unreadNotificationsCount > 0) {
       _markAllNotificationsAsRead();
     }
@@ -319,31 +318,6 @@ class _MainScreenState extends State<MainScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Care Center'),
-        actions: [
-          if (_unreadNotificationsCount > 0)
-            Padding(
-              padding: const EdgeInsets.only(right: 16.0),
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '$_unreadNotificationsCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,

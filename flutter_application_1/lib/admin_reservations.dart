@@ -92,7 +92,6 @@ class AdminReservationsPage extends StatelessWidget {
               String reservationId = snapshot.data!.docs[index].id;
               final data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
               
-              // تنسيق التواريخ
               String formatDate(Timestamp? timestamp) {
                 if (timestamp == null) return 'N/A';
                 return timestamp.toDate().toString().split(' ')[0];

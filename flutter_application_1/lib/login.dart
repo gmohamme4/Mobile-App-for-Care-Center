@@ -17,7 +17,6 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
 
   void login() async {
-    // التحقق من الحقول
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
